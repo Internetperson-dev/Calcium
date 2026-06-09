@@ -1,0 +1,150 @@
+#!/bin/bash
+
+# --------------------------------------------------
+# Detect root device
+# --------------------------------------------------
+
+rootline=$(lsblk -rno NAME,MOUNTPOINT | awk '$2=="/"{print $1}')
+
+# Strip partition numbers
+# Force luks-* to sda (intentional override)
+rootdev=$(echo "$rootline" | sed -E 's/p?[0-9]+$//; s/^luks-.*$/sda/')
+
+echo "Root device: $rootdev"
+
+# --------------------------------------------------
+# Device-specific logic
+# --------------------------------------------------
+
+case "$rootdev" in
+
+nvme*)
+    echo "Boot device is NVMe"
+
+    ROOT="/mnt/sdd"
+    EFI="/mnt/boot/efi"
+    LUKS_DEV="/dev/sda3"
+    LUKS_NAME="luks-ssd"
+    EFI_DEV="/dev/sda1"
+    CONFIG="$HOME/.config/RamOS/update"
+
+    echo "Creating mount points..."
+    mkdir -p "$ROOT" "$EFI"
+
+    echo "Opening LUKS device..."
+    if ! cryptsetup status "$LUKS_NAME" &>/dev/null; then
+        doas cryptsetup luksOpen "$LUKS_DEV" "$LUKS_NAME"
+    else
+        echo "LUKS device $LUKS_NAME already open"
+    fi
+
+    echo "Mounting root filesystem..."
+    doas mount "/dev/mapper/$LUKS_NAME" "$ROOT" || echo "Root mount failed"
+
+    echo "Mounting EFI partition..."
+    doas mount "$EFI_DEV" "$EFI" || echo "EFI mount failed"
+
+    setcap cap_net_admin,cap_net_raw+ep /sbin/wpa_supplicant
+
+    #wpa_supplicant -B -i wlp8s0 -c <(
+       #wpa_passphrase "mikuooeeoo" "mikumikubeam"
+    #)
+
+   # Write ZSH log file
+    mkdir -p ~/.config/zsh
+    cat ~/.config/zsh/history
+
+
+    # --------------------------------------------------
+    # Autoupdate (background)
+    # --------------------------------------------------
+
+    if [ ! -f "$CONFIG" ]; then
+        echo "Config file not found: $CONFIG"
+        exit 1
+    fi
+
+    VALUE=$(grep -E '^autoupdate *= *' "$CONFIG" | awk -F= '{print $2}' | tr -d '[:space:]')
+
+    if [ "$VALUE" = "true" ]; then
+        echo "Autoupdate enabled, running in background"
+        (
+            flatpak update -y
+            pip install -U yt-dlp
+            appimageupdatetool-x86_64.AppImage ~/.local/bin/LibreWolf.AppImage
+            appimageupdatetool-x86_64.AppImage ~/.local/bin/Obsidian.AppImage
+            appimageupdatetool-x86_64.AppImage ~/.local/bin/wine
+            appimageupdatetool-x86_64.AppImage ~/.local/bin/sunshine.AppImage
+            appimageupdatetool-x86_64.AppImage ~/Games/Steam-ROM-Manager-2.5.30.AppImage
+            appimageupdatetool-x86_64.AppImage ~/.local/bin/DuckStation-x64.AppImage
+        ) &
+    else
+        echo "Autoupdate disabled, skipping updates"
+    fi
+
+    ./start
+    ;;
+
+sd*)
+    echo "Boot device is SATA/SCSI"
+
+    ROOT="/mnt/nvme"
+    EFI="$ROOT/boot/efi"
+    LUKS_DEV="/dev/nvme0n1p3"
+    LUKS_NAME="luks-nvme"
+    EFI_DEV="/dev/nvme0n1p1"
+    CONFIG="$HOME/.config/RamOS/update"
+
+    echo "Creating mount points..."
+    mkdir -p "$ROOT" "$EFI"
+
+    echo "Opening LUKS device..."
+    if ! cryptsetup status "$LUKS_NAME" &>/dev/null; then
+        doas cryptsetup luksOpen "$LUKS_DEV" "$LUKS_NAME"
+    else
+        echo "LUKS device $LUKS_NAME already open"
+    fi
+
+    echo "Mounting root filesystem..."
+    doas mount "/dev/mapper/$LUKS_NAME" "$ROOT" || echo "Root mount failed"
+
+    echo "Mounting EFI partition..."
+    doas mount "$EFI_DEV" "$EFI" || echo "EFI mount failed"
+
+    wpa_supplicant -B -i wlp8s0 -c <(
+        wpa_passphrase "mikuooeeoo" "mikumikubeam"
+    )
+
+    if [ ! -f "$CONFIG" ]; then
+        echo "Config file not found: $CONFIG"
+        exit 1
+    fi
+
+    VALUE=$(grep -E '^autoupdate *= *' "$CONFIG" | awk -F= '{print $2}' | tr -d '[:space:]')
+
+    if [ "$VALUE" = "true" ]; then
+        echo "Autoupdate enabled, running in background"
+        (
+            flatpak update -y
+            pip install -U yt-dlp
+            appimageupdatetool-x86_64.AppImage ~/.local/bin/LibreWolf.AppImage --overwrite
+            appimageupdatetool-x86_64.AppImage ~/.local/bin/Obsidian.AppImage --overwrite
+            appimageupdatetool-x86_64.AppImage ~/.local/bin/wine --overwrite
+            appimageupdatetool-x86_64.AppImage ~/.local/bin/sunshine.AppImage --overwrite
+            appimageupdatetool-x86_64.AppImage ~/Games/Steam-ROM-Manager-2.5.30.AppImage --overwrite
+        ) &
+    else
+        echo "Autoupdate disabled, skipping updates"
+    fi
+
+    ./start
+    ;;
+
+mmcblk*)
+    echo "Boot device is SD/eMMC"
+    ;;
+
+*)
+    echo "Unknown device type: $rootdev"
+    ;;
+esac

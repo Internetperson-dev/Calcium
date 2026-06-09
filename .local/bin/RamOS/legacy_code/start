@@ -1,0 +1,6 @@
+#mkdir -p ~/xdg-runtime-dir-$UID
+#chmod 700 ~/xdg-runtime-dir-$UID
+#export XDG_RUNTIME_DIR=~/xdg-runtime-dir-$UID
+syncthing &
+#seatd &
+exec labwc

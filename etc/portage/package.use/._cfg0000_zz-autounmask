@@ -1,0 +1,8 @@
+# required by app-backup/timeshift-23.07.1::guru
+# required by timeshift (argument)
+>=x11-libs/xapp-2.8.9 vala
+# required by llvm-core/clang-runtime-20.1.8::gentoo[openmp]
+# required by llvm-core/clang-20.1.8::gentoo
+# required by llvm-runtimes/compiler-rt-20.1.8::gentoo
+# required by llvm-runtimes/compiler-rt-sanitizers-20.1.8::gentoo
+>=llvm-runtimes/openmp-20.1.8 abi_x86_32

@@ -1,0 +1,53 @@
+#!/bin/bash
+
+# Environment variables (must be set before launching apps)
+export XDG_SESSION_TYPE=wayland
+export OZONE_PLATFORM=wayland
+export ELECTRON_OZONE_PLATFORM_HINT=auto
+export MOZ_ENABLE_WAYLAND=1
+export LIBVA_DRIVER_NAME=nvidia
+export __GLX_VENDOR_LIBRARY_NAME=nvidia
+
+# XDG Desktop Portal
+/usr/libexec/xdg-desktop-portal -r &
+/usr/libexec/xdg-desktop-portal-wlr &
+
+# Syncthing
+syncthing -no-console -no-browser &
+
+# Clipboard Manager
+cursor-clip --daemon &
+clip-board-sync &
+
+# Notifications
+mako >/dev/null 2>&1 &
+
+# Sync App Images for start menu
+for f in ~/.local/appimage/*; do ln -sf "$f" ~/.local/bin/ 2>/dev/null; done &
+
+# Wallpaper
+swaybg -i ~/.config/RamOS/Wallpapers/wallpaper.png &
+
+# Cursor theme
+gsettings set org.gnome.desktop.interface cursor-theme 'Bibata-Modern-Ice' &
+
+# Dark mode
+gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark' &
+
+# SFWBar (panel)
+sfwbar &
+
+# Sunshine
+sunshine.AppImage &
+
+# Hypridle (idle timeout/lock)
+hypridle &
+
+# User autostart
+~/autostart &
+
+# Decky Loader for Steam
+~/.local/bin/RamOS/decky-installer &
+
+# Sync .desktop files for sfwbar
+desktop &

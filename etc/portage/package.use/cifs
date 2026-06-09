@@ -1,0 +1,2 @@
+net-fs/cifs-utils -acl -ads -pam -python -systemd -creds
+net-fs/samba -acl -client -ads -winbind -ldap -python -cups -systemd

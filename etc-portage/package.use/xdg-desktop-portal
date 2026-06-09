@@ -1,0 +1,1 @@
+sys-apps/xdg-desktop-portal flatpak -geolocation gstreamer seccomp -systemd udev

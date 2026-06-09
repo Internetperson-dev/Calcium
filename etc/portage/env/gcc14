@@ -1,0 +1,2 @@
+CC=/usr/bin/x86_64-pc-linux-gnu-gcc-14.3.0
+CXX=/usr/bin/x86_64-pc-linux-gnu-g++-14.3.0

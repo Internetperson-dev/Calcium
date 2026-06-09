@@ -1,0 +1,21 @@
+# /etc/fstab: static file system information.
+#
+# noatime turns off atimes for increased performance (atimes normally aren't
+# needed); notail increases performance of ReiserFS (at the expense of storage
+# efficiency).  It's safe to drop the noatime options if you want and to
+# switch between notail / tail freely.
+#
+# The root filesystem should have a pass number of either 0 or 1.
+# All other filesystems should have a pass number of 0 or greater than 1.
+#
+# See the manpage fstab(5) for more information.
+#
+
+# ntfs-3g is *really* slow. So use the updated driver in the kernel https://www.reddit.com/r/linux_gaming/comments/moxieh/comment/gu7esue/
+
+# <fs> <mountpoint> <type> <opts> <dump/pass>
+UUID=f1f4c287-7056-4e9a-acc7-c33853f8eb15       /                         ext4    defaults,noatime,errors=remount-ro,discard                                               >
+UUID=F205-E62B                                  /boot/efi                 vfat    defaults,noatime,fmask=0177,dmask=0077,noexec,nodev,nosuid,discard                       >
+UUID=8ea050d9-e484-4624-9e26-0a45e2a5194d       none                      swap    defaults,discard                                                                         >
+UUID=C256CCCA56CCC101                           /mnt                      ntfs-3g defaults,uid=1000,gid=1000,noatime                                                       >
+UUID=c3af209a-9d95-44c6-bf21-d28913a752ea       /media                    ext4    defaults,noatime                                                                         

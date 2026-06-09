@@ -1,0 +1,152 @@
+@define-color background_box #F0F0F0;
+@define-color background_active_box alpha(#8a97ee,0.3);
+@define-color border_active_box #8a97ee;
+@define-color selected #1071db;
+@define-color border_box #A0A0A0;
+@define-color default_text #202020;
+
+* {
+	font-family: SF Pro;
+	border-radius: 0px;
+}
+
+window#waybar {
+	color: @default_text;
+
+ 	background: transparent;
+}
+window#waybar > box {
+    border-radius: 0px;
+ 	background: #e4e7ef;
+ 	border-bottom: 1px solid @border_box;
+    box-shadow: 0px 0px 4px 4px alpha(#000000,0.2);
+    margin-bottom: 1rem;
+}
+
+tooltip {
+   	background-color: @background_box;
+	border: 1px solid #aaaaaa;
+	border-radius: 4px;
+}
+
+tooltip label{
+	font-family: Noto Sans;
+	font-size: 18px;
+}
+
+/* Panel Stuff */ 
+
+#network, #bluetooth, #wireplumber, #battery, #power-profiles-daemon, #cpu, #memory, #backlight {
+   	/*background-color: @background_box;
+   	border: 0.1rem solid @border_box;
+    box-shadow: 0px 0px 2px rgba(0,0,0,0.05);
+	border-radius: 4px; */
+	font-family: FiraCode Nerd Font;
+	font-size: 20px;
+    margin: 3px;
+	padding-left: 12px;
+	padding-right: 20px;
+
+}
+/*
+#battery.charging, #network:hover, #wireplumber:hover, #power-profiles-daemon:hover, #battery:hover, #backlight:hover, #mpris.playing, #workspaces button.active{
+   	background-color: @background_active_box;
+	border: 1px solid #66aaff;
+	box-shadow: 0px 0px 4px #66aaff;*/
+/*} */
+
+#tray {
+    margin: 3px;
+    padding-left: 6px;
+    padding-right: 6px;
+}
+
+#mpris {   	
+	font-size: 18px;
+    margin: 5px;
+    border-radius: 4px;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+#clock {
+	padding-left: 6px;
+	padding-right: 18px;
+	margin: 3px;
+	font-size: 20px;
+}
+
+
+
+#custom-logo {
+	padding-left: 12px;
+	padding-right: 14px;
+	margin-left: 12px;
+	margin-right: 2px;
+	font-size: 30px;
+}
+
+#custom-logo:hover,#window:hover{
+	background: @selected;
+	color: #fff;
+}
+#window {
+	padding-left: 12px;
+	padding-right: 12px;
+	margin-left: 0px;
+	margin-right: 4px;
+	margin-top: 0px;
+	margin-bottom: 0px;
+	font-weight: bold;
+	font-size: 20px;
+}
+
+#custom-appmenu {
+	padding-left: 12px;
+	font-size: 20px;
+}
+
+menu {
+    border-radius: 6px;
+    padding: 0px;
+    border: 0px;
+    font-size:12px;
+	box-shadow: 0px 0px 4px alpha(#000000,0.2);
+    background: #e4e7ef;
+}
+menuitem {
+	font-size:20px;
+	padding-top: 3px;
+	padding-bottom: 3px;
+	margin-top: 3px;
+	margin-bottom: 3px;
+}
+menuitem:hover {
+	color: #FFF;
+	font-family: SF Pro;
+
+	border-radius: 0px;
+	background: @selected;
+}
+
+#workspaces {
+   	background-color: @background_box;
+    border: 1px solid @border_box;
+	margin-left: 6px;
+	margin-right:6px;
+	margin-top: 6px;
+	margin-bottom: 6px;
+	font-size: 18px;
+	border-radius: 4px;
+	box-shadow: 0px 0px 3px rgba(0,0,0,0.05);
+}
+#workspaces button {
+	padding: 0px;
+	padding-right: 2px;
+	margin-left: 4px;
+	margin-right: 4px;
+	border-radius:3px;
+}
+#workspaces button:hover {
+   	background-color: @background_active_box;
+}

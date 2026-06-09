@@ -1,0 +1,4 @@
+#!/bin/bash
+flatpak run dev.zed.Zed "$@" 
+
+# This exists because Unity wants to launch a binary and I use Zed as a flatpak.

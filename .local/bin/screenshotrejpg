@@ -1,0 +1,1 @@
+FILE="$HOME/Pictures/Screenshots/$(date +%Y%m%d%H%M%S).jpg" ; grim -g "$(slurp)" "$FILE" && wl-copy --type image/jpg < "$FILE"

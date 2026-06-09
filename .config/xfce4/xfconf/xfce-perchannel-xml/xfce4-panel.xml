@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<channel name="xfce4-panel" version="1.0">
+  <property name="configver" type="int" value="2"/>
+  <property name="panels" type="array">
+    <value type="int" value="1"/>
+    <property name="panel-1" type="empty">
+      <property name="position" type="string" value="p=6;x=840;y=15"/>
+      <property name="length" type="double" value="70.069444444444444"/>
+      <property name="position-locked" type="bool" value="true"/>
+      <property name="icon-size" type="uint" value="24"/>
+      <property name="size" type="uint" value="32"/>
+      <property name="plugin-ids" type="array">
+        <value type="int" value="1"/>
+        <value type="int" value="2"/>
+        <value type="int" value="3"/>
+        <value type="int" value="4"/>
+      </property>
+      <property name="mode" type="uint" value="0"/>
+      <property name="background-style" type="uint" value="1"/>
+      <property name="background-rgba" type="array">
+        <value type="double" value="0.157"/>
+        <value type="double" value="0.157"/>
+        <value type="double" value="0.157"/>
+        <value type="double" value="0.89"/>
+      </property>
+      <property name="enable-struts" type="bool" value="false"/>
+      <property name="dark-mode" type="bool" value="true"/>
+    </property>
+  </property>
+
+  <property name="plugins" type="empty">
+    <property name="plugin-1" type="string" value="separator"/>
+    <property name="plugin-2" type="string" value="applicationsmenu"/>
+    <property name="plugin-3" type="string" value="separator"/>
+    <property name="plugin-4" type="string" value="appmenu"/>
+  </property>
+</channel>

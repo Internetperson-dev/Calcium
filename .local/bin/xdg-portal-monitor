@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+LOG_FILE="$HOME/xdg_portal_process_log.txt"
+INTERVAL=1
+
+declare -A seen_pids
+
+echo "Starting xdg-portal process monitor..." | tee -a "$LOG_FILE"
+
+while true; do
+    # Get PID + command name + full args
+    while read -r pid comm args; do
+        # Match processes starting with xdg-portal
+        if [[ "$comm" == xdg-portal* ]] || [[ "$args" == xdg-portal* ]]; then
+
+            # Only log if we haven't seen this PID before
+            if [[ -z "${seen_pids[$pid]}" ]]; then
+                seen_pids[$pid]=1
+
+                timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+
+                echo "[$timestamp] PID=$pid COMM=$comm ARGS=$args" | tee -a "$LOG_FILE"
+            fi
+        fi
+    done < <(ps -eo pid=,comm=,args=)
+
+    sleep "$INTERVAL"
+done

@@ -1,0 +1,35 @@
+[Added Associations]
+application/octet-stream=net.imput.helium.desktop;dev.zed.Zed.desktop;org.kde.dolphin.desktop;
+x-scheme-handler/http=userapp-LibreWolf-JH46H3.desktop;userapp-LibreWolf-YOGUH3.desktop;userapp-LibreWolf-L5B0G3.desktop;userapp-LibreWolf-XJJQG3.desktop;
+x-scheme-handler/https=userapp-LibreWolf-JH46H3.desktop;userapp-LibreWolf-YOGUH3.desktop;userapp-LibreWolf-L5B0G3.desktop;userapp-LibreWolf-XJJQG3.desktop;
+x-scheme-handler/chrome=userapp-LibreWolf-JH46H3.desktop;userapp-LibreWolf-YOGUH3.desktop;userapp-LibreWolf-XJJQG3.desktop;
+text/html=userapp-LibreWolf-XJJQG3.desktop;userapp-LibreWolf-YOGUH3.desktop;userapp-LibreWolf-JH46H3.desktop;
+application/x-extension-htm=userapp-LibreWolf-XJJQG3.desktop;userapp-LibreWolf-YOGUH3.desktop;userapp-LibreWolf-JH46H3.desktop;
+application/x-extension-html=userapp-LibreWolf-XJJQG3.desktop;userapp-LibreWolf-YOGUH3.desktop;userapp-LibreWolf-JH46H3.desktop;
+application/x-extension-shtml=userapp-LibreWolf-XJJQG3.desktop;userapp-LibreWolf-YOGUH3.desktop;userapp-LibreWolf-JH46H3.desktop;
+application/xhtml+xml=userapp-LibreWolf-XJJQG3.desktop;userapp-LibreWolf-YOGUH3.desktop;userapp-LibreWolf-JH46H3.desktop;
+application/x-extension-xhtml=userapp-LibreWolf-XJJQG3.desktop;userapp-LibreWolf-YOGUH3.desktop;userapp-LibreWolf-JH46H3.desktop;
+application/x-extension-xht=userapp-LibreWolf-XJJQG3.desktop;userapp-LibreWolf-YOGUH3.desktop;userapp-LibreWolf-JH46H3.desktop;
+audio/mp4=org.audacityteam.Audacity.desktop;io.mpv.Mpv.desktop;
+image/jpeg=org.gnome.Loupe.desktop;
+image/png=org.gnome.Loupe.desktop;
+application/pdf=net.imput.helium.desktop;
+application/zip=org.gnome.FileRoller.desktop;
+
+[Default Applications]
+text/html=userapp-LibreWolf-JH46H3.desktop
+x-scheme-handler/http=userapp-LibreWolf-JH46H3.desktop
+x-scheme-handler/https=userapp-LibreWolf-JH46H3.desktop
+x-scheme-handler/about=org.gnome.Epiphany.desktop
+x-scheme-handler/unknown=org.gnome.Epiphany.desktop
+application/uproject=com.epicgames.UnrealEngineEditor.desktop
+x-scheme-handler/discord-712465656758665259=discord-712465656758665259.desktop
+inode/directory=pcmanfm.desktop
+x-scheme-handler/chrome=userapp-LibreWolf-JH46H3.desktop
+application/x-extension-htm=userapp-LibreWolf-JH46H3.desktop
+application/x-extension-html=userapp-LibreWolf-JH46H3.desktop
+application/x-extension-shtml=userapp-LibreWolf-JH46H3.desktop
+application/xhtml+xml=userapp-LibreWolf-JH46H3.desktop
+application/x-extension-xhtml=userapp-LibreWolf-JH46H3.desktop
+application/x-extension-xht=userapp-LibreWolf-JH46H3.desktop
+x-scheme-handler/discord-1345366770436800533=discord-1345366770436800533.desktop

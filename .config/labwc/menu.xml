@@ -1,0 +1,47 @@
+<openbox_menu>
+<menu id="client-menu">
+  <item label="Minimize">
+    <action name="Iconify" />
+  </item>
+  <item label="Maximize">
+    <action name="ToggleMaximize" />
+  </item>
+  <item label="Fullscreen">
+    <action name="ToggleFullscreen" />
+  </item>
+  <item label="Always on Top">
+    <action name="ToggleAlwaysOnTop" />
+  </item>
+  <menu id="client-send-to-menu"/>
+  <item label="Close">
+    <action name="Close" />
+  </item>
+</menu>
+
+<menu id="root-menu">
+  <item label="Terminal">
+    <action name="Execute" command="alacritty" />
+  </item>
+  <item label="File Manager">
+    <action name="Execute" command="st lf" />
+  </item>
+  <item label="Browser">
+    <action name="Execute" command="~/.local/bin/LibreWolf.AppImage" />
+  </item>
+  <separator />
+  <item label="Settings">
+    <action name="Execute" command="st python3.14 ~/.local/bin/RamOS/settings.py" />
+  </item>
+  <item label="System Monitor">
+    <action name="Execute" command="st btop" />
+  </item>
+  <separator />
+  <item label="Reconfigure">
+    <action name="Reconfigure" />
+  </item>
+  <item label="Exit">
+    <action name="Exit" />
+  </item>
+</menu>
+
+</openbox_menu>

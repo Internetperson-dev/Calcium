@@ -1,0 +1,10 @@
+# Exclude mounted or large directories
+- /localhost/***
+- /home/*/Dropbox/***
+- /var/lib/flatpak/***
+
+# Include system directories
++ /etc/**
++ /usr/**
++ /var/**
++ /root/**

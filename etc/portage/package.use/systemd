@@ -1,0 +1,2 @@
+sys-apps/dbus -systemd elogind
+gui-apps/waybar -systemd elogind

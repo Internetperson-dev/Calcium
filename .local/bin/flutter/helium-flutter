@@ -1,0 +1,8 @@
+export CHROME_EXECUTABLE=$HOME/.local/bin/flutter/helium-flutter
+
+#!/usr/bin/env bash
+
+exec flatpak run net.imput.helium \
+  --remote-debugging-port=9222 \
+  --user-data-dir=/tmp/flutter-helium \
+  "$@"

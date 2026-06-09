@@ -1,0 +1,107 @@
+name: Build Gentoo Install ISO
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-iso:
+    runs-on: ubuntu-latest
+    container:
+      image: gentoo/stage3:latest
+      options: --privileged
+    timeout-minutes: 180
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: calcium
+
+      - name: Recombine Split Files
+        run: |
+          bash calcium/scripts/recombine.sh calcium
+
+      - name: Configure Portage
+        run: |
+          rsync -a calcium/etc-portage/ /etc/portage/
+          mkdir -p /tmp/portage /tmp/distfiles
+          echo 'PORTAGE_TMPDIR=/tmp/portage' >> /etc/portage/make.conf
+          echo 'DISTDIR=/tmp/distfiles' >> /etc/portage/make.conf
+          echo 'EMERGE_DEFAULT_OPTS="--quiet-build --getbinpkg --usepkg --binpkg-respect-use=n --verbose"' >> /etc/portage/make.conf
+
+      - name: Sync Portage Tree
+        run: |
+          emerge-webrsync
+          eselect repository enable guru 2>/dev/null || true
+          eselect repository enable CachyOS-kernels 2>/dev/null || true
+          emaint sync -a || true
+
+      - name: Install Build Dependencies
+        run: |
+          emerge -q sys-kernel/gentoo-sources sys-kernel/dracut sys-boot/grub
+
+      - name: Build Kernel with Custom Config
+        run: |
+          KSRC=$(ls -1d /usr/src/linux-* 2>/dev/null | sort -V | tail -1)
+          echo "Kernel source tree: $KSRC"
+          cp calcium/boot-6-15-7/config-6.15.7-gentoo-dist "$KSRC/.config"
+          cd "$KSRC"
+          make olddefconfig
+          make -j$(nproc) bzImage modules
+          make modules_install install
+
+      - name: Build Initramfs
+        run: |
+          KVER=$(ls -1 /lib/modules/ | sort -V | tail -1)
+          echo "Building initramfs for kernel: $KVER"
+          dracut --kver "$KVER" --force --zstd --host-only \
+            --add "bash crypt crypt-gpg" \
+            --ro-mnt /boot/initramfs.img
+
+      - name: Assemble Bootable ISO
+        run: |
+          mkdir -p /iso-root/boot/grub
+
+          cp /boot/vmlinuz-* /iso-root/boot/
+          cp /boot/initramfs* /iso-root/boot/
+          cp calcium/boot-6-15-7/amd-uc.img /iso-root/boot/ 2>/dev/null || true
+
+          printf '%s\n' \
+            'set default="0"' \
+            'set timeout=30' \
+            'insmod all_video' \
+            'insmod gfxterm' \
+            'insmod ext2' \
+            'insmod btrfs' \
+            'insmod fat' \
+            'insmod part_gpt' \
+            '' \
+            'menuentry "Gentoo Linux (Custom Build)" {' \
+            '  linux /boot/vmlinuz-* root=UUID=1234 ro quiet rd.vconsole.keymap=uk' \
+            '  initrd /boot/amd-uc.img /boot/initramfs*' \
+            '}' \
+            '' \
+            'menuentry "Gentoo Linux (Rescue Mode)" {' \
+            '  linux /boot/vmlinuz-* root=UUID=1234 ro single rd.shell rd.debug' \
+            '  initrd /boot/amd-uc.img /boot/initramfs*' \
+            '}' \
+            > /iso-root/boot/grub/grub.cfg
+
+          grub-mkrescue -o /tmp/gentoo-custom-install.iso /iso-root
+
+      - name: Verify ISO
+        run: |
+          ls -lh /tmp/gentoo-custom-install.iso
+          file /tmp/gentoo-custom-install.iso
+
+      - name: Upload ISO Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gentoo-custom-install-amd64
+          path: /tmp/gentoo-custom-install.iso
+          retention-days: 30
+          compression-level: 0

@@ -1,0 +1,26 @@
+#!/bin/bash
+
+last_xclip=""
+last_wlpaste=""
+
+while true; do
+  # Get current clipboard contents
+  xclip_current=$(xclip -selection clipboard -o 2>/dev/null)
+  wl_current=$(wl-paste 2>/dev/null)
+
+  # Sync X -> Wayland if changed
+  if [[ -n "$xclip_current" && "$xclip_current" != "$last_xclip" ]]; then
+    echo "$xclip_current" | wl-copy
+    last_xclip="$xclip_current"
+    last_wlpaste="$xclip_current"
+  fi
+
+  # Sync Wayland -> X if changed
+  if [[ "$wl_current" != "$last_wlpaste" ]]; then
+    echo "$wl_current" | xclip -selection clipboard
+    last_wlpaste="$wl_current"
+    last_xclip="$wl_current"
+  fi
+
+  sleep 0.5
+done

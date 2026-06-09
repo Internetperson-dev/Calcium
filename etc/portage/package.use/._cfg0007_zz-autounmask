@@ -1,0 +1,25 @@
+# required by app-backup/timeshift-23.07.1::guru
+# required by timeshift (argument)
+>=x11-libs/xapp-2.8.9 vala
+# required by dev-python/setuptools-82.0.1::gentoo
+# required by dev-util/gdbus-codegen-2.84.4::gentoo
+# required by x11-libs/gtk+-3.24.51::gentoo
+# required by x11-themes/adwaita-icon-theme-49.0::gentoo
+>=dev-python/more-itertools-11.0.2 python_targets_python3_12
+# required by dev-python/setuptools-82.0.1::gentoo
+# required by dev-util/gdbus-codegen-2.84.4::gentoo
+# required by x11-libs/gtk+-3.24.51::gentoo
+# required by x11-themes/adwaita-icon-theme-49.0::gentoo
+>=dev-python/setuptools-scm-10.0.5 python_targets_python3_12
+# required by dev-python/setuptools-scm-10.0.5::gentoo[-test]
+# required by dev-python/setuptools-82.0.1::gentoo
+# required by dev-util/gdbus-codegen-2.84.4::gentoo
+# required by x11-libs/gtk+-3.24.51::gentoo
+# required by x11-themes/adwaita-icon-theme-49.0::gentoo
+>=dev-python/vcs-versioning-1.1.1 python_targets_python3_12
+# required by dev-python/jaraco-text-4.2.0::gentoo
+# required by dev-python/setuptools-82.0.1::gentoo
+# required by dev-util/gdbus-codegen-2.84.4::gentoo
+# required by x11-libs/gtk+-3.24.51::gentoo
+# required by x11-themes/adwaita-icon-theme-49.0::gentoo
+>=dev-python/jaraco-context-6.1.2 python_targets_python3_12

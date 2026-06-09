@@ -1,0 +1,260 @@
+#!/usr/bin/env python3
+"""
+RamOS Settings GUI
+Replaces the curses-based TUI with a simple Tkinter GUI.
+Includes dark mode styling inspired by libadwaita and auto-creates a .desktop entry.
+"""
+
+import os
+import shutil
+import subprocess
+import tkinter as tk
+from tkinter import filedialog, messagebox, ttk
+
+# -------------------- Paths --------------------
+HOME = os.path.expanduser("~")
+CONFIG_DIR = os.path.join(HOME, ".config", "RamOS")
+WALLPAPER_DIR = os.path.join(CONFIG_DIR, "Wallpapers")
+WALLPAPER = os.path.join(WALLPAPER_DIR, "wallpaper.png")
+LOCKPAPER = os.path.join(WALLPAPER_DIR, "lockpaper.png")
+PDF_PATH = os.path.join(CONFIG_DIR, "RamOS.pdf")
+UPDATE_FILE = os.path.join(CONFIG_DIR, "update")
+BACKUP_DIR = os.path.join(HOME, ".local", "share", "ramos_backups")
+
+os.makedirs(WALLPAPER_DIR, exist_ok=True)
+os.makedirs(BACKUP_DIR, exist_ok=True)
+
+
+# -------------------- Desktop Entry --------------------
+def create_desktop_entry():
+    desktop_dir = os.path.join(HOME, ".local", "share", "applications")
+    os.makedirs(desktop_dir, exist_ok=True)
+
+    desktop_file = os.path.join(desktop_dir, "ramos-settings.desktop")
+
+    content = f"""[Desktop Entry]
+Name=RamOS Settings
+Comment=Configure RamOS settings
+Exec=python3.14 {os.path.abspath(__file__)}
+Icon=preferences-system
+Terminal=false
+Type=Application
+Categories=Utility;Settings;
+StartupNotify=true
+"""
+    if not os.path.exists(desktop_file):
+        with open(desktop_file, "w") as f:
+            f.write(content)
+        os.chmod(desktop_file, 0o644)
+
+
+create_desktop_entry()
+
+
+# -------------------- Utility Functions --------------------
+def backup_file(path):
+    if os.path.exists(path):
+        shutil.copy2(path, os.path.join(BACKUP_DIR, os.path.basename(path)))
+
+
+def set_image(target):
+    file_path = filedialog.askopenfilename(
+        title="Select image",
+        initialdir=HOME,
+        filetypes=[("Images", "*.png *.jpg *.jpeg *.webp"), ("All files", "*")],
+    )
+    if not file_path:
+        return
+    backup_file(target)
+    shutil.copy2(file_path, target)
+    messagebox.showinfo("Success", f"Set {os.path.basename(target)}")
+
+
+def revert_image(filename):
+    backup = os.path.join(BACKUP_DIR, filename)
+    target = os.path.join(WALLPAPER_DIR, filename)
+    if not os.path.exists(backup):
+        messagebox.showerror("Error", "No backup found")
+        return
+    shutil.copy2(backup, target)
+    messagebox.showinfo("Reverted", f"Reverted {filename}")
+
+
+def toggle_autoupdate():
+    if not os.path.exists(UPDATE_FILE):
+        messagebox.showerror("Error", "Update file not found")
+        return
+
+    with open(UPDATE_FILE, "r") as f:
+        lines = f.readlines()
+
+    new_lines = []
+    status = None
+    for line in lines:
+        if line.strip().startswith("autoupdate"):
+            if "true" in line:
+                new_lines.append("autoupdate = false\n")
+                status = "Autoupdate disabled"
+            else:
+                new_lines.append("autoupdate = true\n")
+                status = "Autoupdate enabled"
+        else:
+            new_lines.append(line)
+
+    with open(UPDATE_FILE, "w") as f:
+        f.writelines(new_lines)
+
+    messagebox.showinfo("Autoupdate", status or "Setting not found")
+
+
+def open_manual():
+    if not os.path.exists(PDF_PATH):
+        messagebox.showerror("Error", "RamOS.pdf not found")
+        return
+
+    browser = shutil.which("LibreWolf.AppImage") or shutil.which("librewolf")
+    if not browser:
+        messagebox.showerror("Error", "LibreWolf not found in PATH")
+        return
+
+    subprocess.Popen([browser, PDF_PATH])
+
+
+def open_flatseal():
+    flatsteal = os.system("flatpak run com.github.tchx84.Flatseal")
+    #flatseal = shutil.which("flatpak run com.github.tchx84.Flatseal")
+    if not flatseal:
+        messagebox.showerror("Error", "Flatseal not found in PATH")
+        return
+    subprocess.Popen([flatseal])
+
+
+def open_pulsemixer():
+    terminal = (
+        shutil.which("foot")
+        or shutil.which("st")
+        or shutil.which("kitty")
+        or shutil.which("alacritty")
+        or shutil.which("gnome-terminal")
+        or shutil.which("xterm")
+    )
+
+    if not terminal:
+        messagebox.showerror("Error", "No supported terminal found")
+        return
+
+    subprocess.Popen([terminal, "-e", "pulsemixer"])
+
+
+# -------------------- Dark Mode GUI --------------------
+BG = "#1e1e1e"
+FG = "#eeeeee"
+ACCENT = "#3584e4"
+BTN_BG = "#2b2b2b"
+BTN_HOVER = "#3a3a3a"
+
+root = tk.Tk()
+root.title("RamOS Settings")
+root.geometry("420x520")
+root.resizable(False, False)
+root.configure(bg=BG)
+
+style = ttk.Style()
+style.theme_use("clam")
+
+style.configure(".", background=BG, foreground=FG, font=("Cantarell", 11))
+style.configure("Card.TFrame", background=BG)
+style.configure(
+    "Title.TLabel", font=("Cantarell", 16, "bold"), background=BG, foreground=FG
+)
+
+style.configure(
+    "Adw.TButton",
+    background=BTN_BG,
+    foreground=FG,
+    padding=(12, 8),
+    borderwidth=0,
+    focusthickness=0,
+)
+style.map(
+    "Adw.TButton",
+    background=[("active", BTN_HOVER)],
+    foreground=[("disabled", "#777777")],
+)
+
+style.configure("Accent.TButton", background=ACCENT, foreground="white")
+style.map("Accent.TButton", background=[("active", "#4a90e2")])
+
+
+# -------------------- Layout --------------------
+frame = ttk.Frame(root, style="Card.TFrame", padding=20)
+frame.pack(fill="both", expand=True)
+
+ttk.Label(frame, text="RamOS Settings", style="Title.TLabel").pack(pady=(0, 18))
+
+# Wallpaper
+ttk.Button(
+    frame,
+    text="Change Wallpaper",
+    style="Accent.TButton",
+    command=lambda: set_image(WALLPAPER),
+).pack(fill="x", pady=4)
+ttk.Button(
+    frame,
+    text="Revert Wallpaper",
+    style="Adw.TButton",
+    command=lambda: revert_image("wallpaper.png"),
+).pack(fill="x", pady=4)
+
+# Lockscreen
+ttk.Button(
+    frame,
+    text="Change Lockscreen",
+    style="Accent.TButton",
+    command=lambda: set_image(LOCKPAPER),
+).pack(fill="x", pady=(12, 4))
+ttk.Button(
+    frame,
+    text="Revert Lockscreen",
+    style="Adw.TButton",
+    command=lambda: revert_image("lockpaper.png"),
+).pack(fill="x", pady=4)
+
+# Other Options
+ttk.Button(
+    frame,
+    text="Toggle Autoupdate",
+    style="Adw.TButton",
+    command=toggle_autoupdate,
+).pack(fill="x", pady=(14, 4))
+
+ttk.Button(
+    frame,
+    text="Open Flatseal",
+    style="Adw.TButton",
+    command=open_flatseal,
+).pack(fill="x", pady=4)
+
+ttk.Button(
+    frame,
+    text="Open Pulsemixer",
+    style="Adw.TButton",
+    command=open_pulsemixer,
+).pack(fill="x", pady=4)
+
+ttk.Button(
+    frame,
+    text="Open RamOS Manual (PDF)",
+    style="Adw.TButton",
+    command=open_manual,
+).pack(fill="x", pady=(14, 4))
+
+# Exit
+ttk.Button(
+    frame,
+    text="Exit",
+    style="Adw.TButton",
+    command=root.destroy,
+).pack(fill="x", pady=(18, 0))
+
+root.mainloop()

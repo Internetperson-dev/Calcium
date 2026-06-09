@@ -1,0 +1,59 @@
+#!/bin/sh
+# iwd connection script (Gentoo, no init, scan-safe)
+
+# --- REQUIRE ROOT ---
+if [ "$(id -u)" -ne 0 ]; then
+  echo "Run as root (use doas)"
+  exit 1
+fi
+
+SSID="mikuooeeoo"
+PASS="mikumikubeam"
+IFACES="wlan0 wlan1"
+
+echo "Switching to iwd..."
+
+# Stop conflicting supplicant
+if pgrep wpa_supplicant >/dev/null; then
+  echo "Stopping wpa_supplicant"
+  pkill wpa_supplicant
+fi
+
+# Start iwd once
+if ! pgrep iwd >/dev/null; then
+  echo "Starting iwd"
+  /usr/libexec/iwd &
+fi
+
+# Wait for iwd
+echo "Waiting for iwd..."
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+  iwctl device list >/dev/null 2>&1 && break
+  sleep 0.2
+done
+
+if ! iwctl device list >/dev/null 2>&1; then
+  echo "ERROR: iwd not responding"
+  exit 1
+fi
+
+# Connect interfaces
+for i in $IFACES; do
+  echo "Processing $i"
+  ip link set "$i" up 2>/dev/null || continue
+
+  iwctl station "$i" disconnect 2>/dev/null
+
+  echo "Scanning on $i"
+  iwctl station "$i" scan
+  sleep 2   # scan needs time
+
+  if iwctl station "$i" connect "$SSID" --passphrase "$PASS"; then
+    echo "Connected on $i"
+    dhcpcd "$i"
+  else
+    echo "Connection failed on $i"
+  fi
+done
+
+echo "Done."

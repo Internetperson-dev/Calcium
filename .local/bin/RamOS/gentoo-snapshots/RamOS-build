@@ -1,0 +1,155 @@
+#!/bin/bash
+# gentoo-redistributable.sh
+# Creates a reproducible Gentoo snapshot with incremental versioning
+# Includes extra home scripts, configs, Flatpaks, NVIDIA drivers,
+# USE flags, build settings, and doas configuration
+
+set -euo pipefail
+
+# --------------------------
+# 0️⃣ Configuration
+# --------------------------
+BASE_DIR="$HOME/gentoo-snapshots"   # Base folder for snapshots
+mkdir -p "$BASE_DIR"
+
+EXTRA_FILES=(
+    "$HOME/fix.sh"
+    "$HOME/librewolfupdate"
+    "$HOME/quickchroot.sh"
+    "$HOME/start.sh"
+    "$HOME/start-hypr"
+    "$HOME/systemstart"
+    "$HOME/systemstart-hypr"
+    "$HOME/amd-cpu-temp"
+    "$HOME/amd-thermal-throttle.sh"
+    "$HOME/audio"
+    "$HOME/.local/bin"
+)
+
+MANUAL_NVIDIA_DIRS=(
+    "$HOME/Downloads/NVIDIA-*.run"
+    "$HOME/nvidia-installers/NVIDIA-*.run"
+)
+
+# --------------------------
+# 1️⃣ Determine next snapshot version
+# --------------------------
+i=1
+while [ -d "$BASE_DIR/gentoo-snapshot-$(printf '%03d' "$i")" ]; do
+    i=$((i+1))
+done
+SNAP_DIR="$BASE_DIR/gentoo-snapshot-$(printf '%03d' "$i")"
+mkdir -p "$SNAP_DIR"
+
+echo "Creating Gentoo snapshot in $SNAP_DIR"
+
+# --------------------------
+# 2️⃣ Export installed packages
+# --------------------------
+
+echo "Exporting installed packages with versions..."
+# Try qlist first
+if command -v qlist >/dev/null 2>&1; then
+    qlist -Iv > "$SNAP_DIR/gentoo-packages.txt" 2>/dev/null || true
+fi
+
+# Fallback to equery if qlist fails or is empty
+if [ ! -s "$SNAP_DIR/gentoo-packages.txt" ] && command -v equery >/dev/null 2>&1; then
+    equery list '*' --installed > "$SNAP_DIR/gentoo-packages.txt" 2>/dev/null || true
+fi
+
+# Also save world file for reference
+cp /var/lib/portage/world "$SNAP_DIR/world.txt" 2>/dev/null || true
+
+# --------------------------
+# 3️⃣ Archive local source code
+# --------------------------
+echo "Archiving local source code..."
+tar czf "$SNAP_DIR/local-src.tar.gz" /usr/local/src /root/src 2>/dev/null || true
+
+# --------------------------
+# 4️⃣ Archive system configs
+# --------------------------
+echo "Archiving system configs..."
+tar czf "$SNAP_DIR/system-configs.tar.gz" /etc /root/.config 2>/dev/null || true
+
+# --------------------------
+# 5️⃣ Archive user configs
+# --------------------------
+if [ -d "$HOME/.config" ]; then
+    echo "Archiving user configs..."
+    tar czf "$SNAP_DIR/user-configs.tar.gz" "$HOME/.config" 2>/dev/null || true
+fi
+
+# --------------------------
+# 6️⃣ Save Flatpak apps and environment
+# --------------------------
+if command -v flatpak >/dev/null 2>&1; then
+    echo "Saving Flatpak apps and environment..."
+    flatpak list --app > "$SNAP_DIR/flatpak-apps.txt" || true
+    flatpak --user info --show-permissions --show-installation > "$SNAP_DIR/flatpak-permissions.txt" || true
+fi
+
+# --------------------------
+# 7️⃣ Save Portage world, make.conf, USE flags, build settings
+# --------------------------
+echo "Saving Portage world, make.conf, USE flags, and build settings..."
+cp /var/lib/portage/world "$SNAP_DIR/" 2>/dev/null || true
+cp /etc/portage/make.conf "$SNAP_DIR/" 2>/dev/null || true
+cp -r /etc/portage/repos.conf "$SNAP_DIR/" 2>/dev/null || true
+cp /etc/environment "$SNAP_DIR/" 2>/dev/null || true
+cp /etc/portage/package.use "$SNAP_DIR/" 2>/dev/null || true
+cp /etc/portage/package.accept_keywords "$SNAP_DIR/" 2>/dev/null || true
+cp /etc/portage/package.mask "$SNAP_DIR/" 2>/dev/null || true
+cp /etc/portage/package.unmask "$SNAP_DIR/" 2>/dev/null || true
+emerge --info > "$SNAP_DIR/emerge-info.txt" 2>/dev/null || true
+
+# --------------------------
+# 8️⃣ Copy extra home scripts & directories
+# --------------------------
+echo "Copying extra files and directories..."
+for item in "${EXTRA_FILES[@]}"; do
+    if [ -e "$item" ]; then
+        cp -r "$item" "$SNAP_DIR/" || echo "Failed to copy $item"
+    fi
+done
+
+# --------------------------
+# 9️⃣ Backup NVIDIA drivers and manual .run installers
+# --------------------------
+echo "Backing up NVIDIA drivers and manual installers..."
+NVIDIA_BACKUP="$SNAP_DIR/nvidia-backup"
+mkdir -p "$NVIDIA_BACKUP"
+
+# 9a: Portage-installed NVIDIA modules and configs
+KERNEL_VER=$(uname -r)
+NVIDIA_MODULES="/usr/lib/modules/$KERNEL_VER/kernel/drivers/video/nvidia*"
+NVIDIA_MODPROBE="/etc/modprobe.d/nvidia*"
+NVIDIA_XORG="/etc/X11/xorg.conf.d/*nvidia*.conf"
+
+for path in $NVIDIA_MODULES $NVIDIA_MODPROBE $NVIDIA_XORG; do
+    if compgen -G "$path" > /dev/null; then
+        cp -r $path "$NVIDIA_BACKUP/" || echo "Failed to copy $path"
+    fi
+done
+
+# 9b: Manual NVIDIA .run files
+for runfile in "${MANUAL_NVIDIA_DIRS[@]}"; do
+    if compgen -G "$runfile" > /dev/null; then
+        cp $runfile "$NVIDIA_BACKUP/" || echo "Failed to copy $runfile"
+    fi
+done
+
+# --------------------------
+# 🔟 Backup doas config
+# --------------------------
+if [ -f /etc/doas.conf ]; then
+    echo "Copying /etc/doas.conf..."
+    cp /etc/doas.conf "$SNAP_DIR/" || echo "Failed to copy /etc/doas.conf"
+fi
+
+echo "✅ Gentoo snapshot created successfully at $SNAP_DIR"
+
+# Optional: compress entire snapshot folder
+# echo "Compressing snapshot folder..."
+# tar czf "${SNAP_DIR}.tar.gz" -C "$BASE_DIR" "$(basename "$SNAP_DIR")"

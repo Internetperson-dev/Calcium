@@ -1,0 +1,8 @@
+realdesktop.duckdns.org {
+    root * /var/www/html
+    file_server
+
+    tls {
+        ca https://acme-staging-v02.api.letsencrypt.org/directory
+    }
+}

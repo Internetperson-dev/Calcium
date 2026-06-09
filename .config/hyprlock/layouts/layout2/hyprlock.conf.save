@@ -1,0 +1,169 @@
+# BACKGROUND
+background {
+    monitor =
+    path = /home/ram/.config/RamOS/Wallpapers/wallpaper.png
+    blur_passes = 3
+    contrast = 0.8916
+    brightness = 0.8172
+    vibrancy = 0.1696
+}
+
+# GENERAL
+general {
+    no_fade_in = false
+    grace = 0
+    disable_loading_bar = false
+}
+
+# ---------------- TOP ROW ----------------
+label {
+    monitor =
+    text = cmd[update:1000] date +"%Y-%m-%d"
+    color = rgba(216,222,233,0.7)
+    font_size = 25
+    font_family = SF Pro Display Bold
+    position = 0, -120
+    halign = center
+    valign = top
+}
+
+# ---------------- MIDDLE ROW ----------------
+
+# Album Art
+#image {
+#    path = /home/ram/.config/hyprlock/layouts/layout2/Scripts/nowplaying/album_art.jpg
+#    size = 180
+#    rounding = 12
+#    position = -320, 0
+#    halign = center
+#    valign = center
+#}
+
+# Song Info
+#label {
+#    monitor =
+#    text = cmd[update:1000] ~/.config/hyprlock/layouts/layout2/Scripts/nowplaying/nowplaying.sh
+#    color = rgba(255,255,255,0.85)
+#    font_size = 18
+#    font_family = JetBrains Mono Nerd, SF Pro Display Bold
+#    position = 0, 0
+#    halign = center
+#    valign = center
+#}
+
+# ---------------- BOTTOM ROW ----------------
+
+# 24 hour time
+label {
+    monitor =
+    text = cmd[update:1000] date +"%H:%M"
+    color = rgba(216,222,233,0.7)
+    font_size = 110
+    font_family = SF Pro Display Bold
+    position = 0, 500       # moved lower to avoid overlap
+    halign = center
+    valign = bottom
+}
+
+# Password Input
+input-field {
+    monitor =
+    size = 320, 60
+    outline_thickness = 2
+
+    dots_size = 0.2
+    dots_spacing = 0.3
+    dots_center = true
+
+    outer_color = rgba(0,0,0,0)
+    inner_color = rgba(255,255,255,0.1)
+    font_color = rgb(200,200,200)
+
+    fade_on_empty = false
+    font_family = SF Pro Display Bold
+
+    placeholder_text = 🔒 Enter Password
+    hide_input = false
+
+    position = 0, 150
+    halign = center
+    valign = bottom
+}
+
+# USER-BOX
+shape {
+    monitor =
+    size = 300, 60
+    color = rgba(255, 255, 255, .1)
+    rounding = -1
+    border_size = 0
+    border_color = rgba(253, 198, 135, 0)
+    rotate = 0
+    xray = false # if true, make a "hole" in the background (rectangle of specified size, no rotation)
+
+    position = 0, -180      # moved higher to prevent overlap
+    halign = center
+    valign = center
+}
+
+# User
+label {
+    monitor =
+    text =   $USER
+    color = rgba(216,222,233,0.8)
+    font_size = 18
+    font_family = SF Pro Display Bold
+    position = 0, -180      # match user-box
+    halign = center
+    valign = center
+}
+
+# ---------------- POWER BUTTONS ----------------
+
+# Reboot
+label {
+    monitor =
+x    text = Reboot
+    font_size = 20
+    color = rgba(255,255,255,0.7)
+    onclick = reboot
+    position = -120, 50
+    halign = center
+    valign = bottom
+}
+
+# Power Off
+label {
+    monitor =
+    text = Power Off
+    font_size = 20
+    color = rgba(255,255,255,0.7)
+    onclick = shutdown now
+    position = 0, 50
+    halign = center
+    valign = bottom
+}
+
+# Suspend
+#label {
+#    monitor =
+#    text = Suspend
+#    font_size = 45
+#    color = rgba(255,255,255,0.7)
+#    onclick = systemctl suspend
+#    position = 120, 50
+#    halign = center
+#    valign = bottom
+#}
+
+# Close Hyprland
+label {
+    monitor =
+    text = Leave 
+    font_size = 20
+    color = rgba(255,255,255,0.7)
+    onclick = hyprctl dispatch exit
+    position = 240, 50
+    halign = center
+    valign = bottom
+}

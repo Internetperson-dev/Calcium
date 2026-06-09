@@ -1,0 +1,1 @@
+app-emulation/virtualbox gui opengl sdl -strip -udev -vmmraw -alsa -dbus dist-kernel -doc -dtrace -java-lvm -moduels-compress -modules-sign -nls -pam pch pulseaudio python -test -vboxwebsrv -vde -vnc

@@ -1,0 +1,6 @@
+#!/bin/bash
+export STEAM_RUNTIME=0
+unset LD_PRELOAD
+
+# Run your game or emulator
+/usr/bin/flatpak run org.DolphinEmu.dolphin-emu -b -e "$1"

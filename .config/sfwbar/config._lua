@@ -1,0 +1,16 @@
+bar = {
+  position = "bottom",
+  height = 28,
+  anchor_to_edges = true,
+  font = "monospace 11",
+  background = "#222222",
+  foreground = "#ffffff",
+  margin = 0,
+  spacing = 8,
+
+  items = {
+    { type = "workspaces" },
+    { type = "window" },
+    { type = "clock", format = "%Y-%m-%d" }
+  }
+}

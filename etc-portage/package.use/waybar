@@ -1,0 +1,1 @@
+gui-app/waybar wifi tray -systemd -snido -niri -mpd -jack -experimental -evdev pulseaudio pipewire network

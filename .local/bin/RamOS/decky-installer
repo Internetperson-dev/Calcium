@@ -1,0 +1,58 @@
+#!/bin/sh
+
+DECKY_DIR="$HOME/.local/share/decky"
+SERVICE_DIR="$DECKY_DIR/services"
+PLUGIN_DIR="$DECKY_DIR/plugins"
+TMPDIR="${TMPDIR:-$HOME/.cache/decky-tmp}"
+BIN="$SERVICE_DIR/PluginLoader"
+
+export TMPDIR
+
+mkdir -p "$SERVICE_DIR" "$PLUGIN_DIR" "$TMPDIR"
+
+# Function to check for dependencies
+require_command() {
+    command -v "$1" >/dev/null 2>&1 || {
+        echo "$1 is required"
+        exit 1
+    }
+}
+
+require_command curl
+require_command jq
+
+# Check if Decky Loader already exists
+if [ ! -x "$BIN" ]; then
+    echo "Decky Loader not found. Downloading latest release..."
+
+    RELEASE_JSON=$(curl -s https://api.github.com/repos/SteamDeckHomebrew/decky-loader/releases)
+    if [ -z "$RELEASE_JSON" ]; then
+        echo "Failed to fetch release info"
+        exit 1
+    fi
+
+    URL=$(echo "$RELEASE_JSON" | jq -r 'map(select(.prerelease==false))[0].assets[].browser_download_url | select(endswith("PluginLoader"))')
+    if [ -z "$URL" ]; then
+        echo "Could not find PluginLoader asset"
+        exit 1
+    fi
+
+    if ! curl -L "$URL" -o "$BIN"; then
+        echo "Download failed"
+        exit 1
+    fi
+
+    chmod +x "$BIN"
+fi
+
+# Enable CEF debugging for Steam Flatpak (if Steam exists)
+STEAM_DIR="$HOME/.var/app/com.valvesoftware.Steam"
+STEAM_DEBUG="$STEAM_DIR/data/Steam/.cef-enable-remote-debugging"
+if [ -d "$STEAM_DIR" ]; then
+    touch "$STEAM_DEBUG"
+fi
+
+touch ~/.var/app/com.valvesoftware.Steam/data/Steam/.cef-enable-remote-debugging
+
+echo "Starting Decky Loader..."
+exec "$BIN"

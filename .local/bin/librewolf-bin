@@ -1,0 +1,15 @@
+#LibreWolf.AppImage
+
+#!/bin/bash
+
+APPIMAGE="/home/ram/.local/appimage/LibreWolf.AppImage"
+#LOGDIR="$HOME/librewolf-logs"
+mkdir -p "$LOGDIR"
+
+#export MOZ_LOG="Compositor:5,Widget:5,GLContext:5,PlatformDecoderModule:5"
+#export MOZ_LOG_FILE="$LOGDIR/moz.log"
+#export MOZ_DISABLE_GPU_SANDBOX=1
+
+ulimit -c unlimited
+
+"$APPIMAGE" "$@" 2>&1 | tee "$LOGDIR/stdout.log"

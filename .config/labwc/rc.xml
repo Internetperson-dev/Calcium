@@ -1,0 +1,280 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<labwc_config>
+
+  <core>
+    <decoration>server</decoration>
+    <gap>1</gap>
+    <adaptiveSync>yes</adaptiveSync>
+    <allowTearing>yes</allowTearing>
+    <autoEnableOutputs>yes</autoEnableOutputs>
+    <primarySelection>yes</primarySelection>
+  </core>
+
+  <placement>
+    <policy>cascade</policy>
+  </placement>
+
+  <theme>
+    <name>Clearlooks-3.4</name>
+    <cornerRadius>10</cornerRadius>
+    <keepBorder>yes</keepBorder>
+    <maximizedDecoration>titlebar</maximizedDecoration>
+    <dropShadows>yes</dropShadows>
+    <font place="ActiveWindow">
+      <name>JetBrainsMono Nerd Font</name>
+      <size>12</size>
+    </font>
+    <font place="InactiveWindow">
+      <name>JetBrainsMono Nerd Font</name>
+      <size>12</size>
+    </font>
+    <font place="MenuItem">
+      <name>sans</name>
+      <size>10</size>
+    </font>
+    <font place="OnScreenDisplay">
+      <name>sans</name>
+      <size>10</size>
+    </font>
+    <titlebar>
+      <layout>icon:iconify,max,close</layout>
+    </titlebar>
+  </theme>
+
+  <resistance>
+    <screenEdgeStrength>20</screenEdgeStrength>
+    <windowEdgeStrength>20</windowEdgeStrength>
+  </resistance>
+
+  <focus>
+    <followMouse>yes</followMouse>
+    <raiseOnFocus>yes</raiseOnFocus>
+  </focus>
+
+  <snapping>
+    <range inner="25" outer="10" />
+    <topMaximize>yes</topMaximize>
+  </snapping>
+
+  <desktops>
+    <number>4</number>
+    <popupTime>1000</popupTime>
+  </desktops>
+
+  <keyboard>
+    <repeatRate>25</repeatRate>
+    <repeatDelay>600</repeatDelay>
+
+    <!-- Terminal -->
+    <keybind key="W-Return">
+      <action name="Execute" command="alacritty" />
+    </keybind>
+
+    <!-- Kill active window -->
+    <keybind key="W-q">
+      <action name="Close" />
+    </keybind>
+
+    <!-- File manager -->
+    <keybind key="W-r">
+      <action name="Execute" command="st lf" />
+    </keybind>
+
+    <!-- Toggle floating -->
+    <keybind key="W-v">
+      <action name="ToggleFloating" />
+    </keybind>
+
+    <!-- Audio mixer -->
+    <keybind key="W-m">
+      <action name="Execute" command="st pulsemixer" />
+    </keybind>
+
+    <!-- Lock screen -->
+    <keybind key="W-l">
+      <action name="Execute" command="hyprlock -c ~/.config/hyprlock/layouts/layout2/hyprlock.conf" />
+    </keybind>
+
+    <!-- Settings -->
+    <keybind key="W-F1">
+      <action name="Execute" command="st python3.14 ~/.local/bin/RamOS/settings.py" />
+    </keybind>
+
+    <!-- Browser -->
+    <keybind key="W-w">
+      <action name="Execute" command="~/.local/bin/LibreWolf.AppImage" />
+    </keybind>
+
+    <!-- System monitor -->
+    <keybind key="W-h">
+      <action name="Execute" command="st btop" />
+    </keybind>
+
+    <!-- Screenshot -->
+    <keybind key="Print">
+      <action name="Execute" command="~/.local/bin/screenshot" />
+    </keybind>
+    <keybind key="S-Print">
+      <action name="Execute" command="~/.local/bin/screenshotre" />
+    </keybind>
+
+    <!-- Clipboard -->
+    <keybind key="W-comma">
+      <action name="Execute" command="~/.local/src/cursor-clip/target/release/cursor-clip" />
+    </keybind>
+
+    <!-- Fullscreen -->
+    <keybind key="W-f">
+      <action name="ToggleMaximize" />
+    </keybind>
+
+    <!-- Alt+Tab to cycle windows -->
+    <keybind key="A-Tab">
+      <action name="NextWindow" />
+    </keybind>
+
+    <!-- Move focus with Super + arrow keys -->
+    <keybind key="W-Left">
+      <action name="Focus" direction="left" />
+    </keybind>
+    <keybind key="W-Right">
+      <action name="Focus" direction="right" />
+    </keybind>
+    <keybind key="W-Up">
+      <action name="Focus" direction="up" />
+    </keybind>
+    <keybind key="W-Down">
+      <action name="Focus" direction="down" />
+    </keybind>
+
+    <!-- Workspace 1-4 -->
+    <keybind key="W-1">
+      <action name="GoToDesktop" to="1" />
+    </keybind>
+    <keybind key="W-2">
+      <action name="GoToDesktop" to="2" />
+    </keybind>
+    <keybind key="W-3">
+      <action name="GoToDesktop" to="3" />
+    </keybind>
+    <keybind key="W-4">
+      <action name="GoToDesktop" to="4" />
+    </keybind>
+
+    <!-- Move window to workspace -->
+    <keybind key="W-S-1">
+      <action name="SendToDesktop" to="1" />
+    </keybind>
+    <keybind key="W-S-2">
+      <action name="SendToDesktop" to="2" />
+    </keybind>
+    <keybind key="W-S-3">
+      <action name="SendToDesktop" to="3" />
+    </keybind>
+    <keybind key="W-S-4">
+      <action name="SendToDesktop" to="4" />
+    </keybind>
+    <keybind key="W-S-5">
+      <action name="SendToDesktop" to="5" />
+    </keybind>
+    <keybind key="W-S-6">
+      <action name="SendToDesktop" to="6" />
+    </keybind>
+    <keybind key="W-S-7">
+      <action name="SendToDesktop" to="7" />
+    </keybind>
+    <keybind key="W-S-8">
+      <action name="SendToDesktop" to="8" />
+    </keybind>
+    <keybind key="W-S-9">
+      <action name="SendToDesktop" to="9" />
+    </keybind>
+    <keybind key="W-S-0">
+      <action name="SendToDesktop" to="10" />
+    </keybind>
+
+    <!-- Move to special workspace (scratchpad) -->
+    <keybind key="W-S-s">
+      <action name="SendToDesktop" to="special:magic" />
+    </keybind>
+
+    <!-- Workspace switching with scroll -->
+    <keybind key="W-mouse_down">
+      <action name="GoToDesktop" to="next" />
+    </keybind>
+    <keybind key="W-mouse_up">
+      <action name="GoToDesktop" to="prev" />
+    </keybind>
+
+    <!-- Audio keys -->
+    <keybind key="XF86AudioRaiseVolume">
+      <action name="Execute" command="wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+" />
+    </keybind>
+    <keybind key="XF86AudioLowerVolume">
+      <action name="Execute" command="wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-" />
+    </keybind>
+    <keybind key="XF86AudioMute">
+      <action name="Execute" command="wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle" />
+    </keybind>
+    <keybind key="XF86AudioMicMute">
+      <action name="Execute" command="wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle" />
+    </keybind>
+
+    <!-- Brightness keys -->
+    <keybind key="XF86MonBrightnessUp">
+      <action name="Execute" command="brightnessctl -e4 -n2 set 5%+" />
+    </keybind>
+    <keybind key="XF86MonBrightnessDown">
+      <action name="Execute" command="brightnessctl -e4 -n2 set 5%-" />
+    </keybind>
+
+    <!-- Media keys -->
+    <keybind key="XF86AudioNext">
+      <action name="Execute" command="playerctl next" />
+    </keybind>
+    <keybind key="XF86AudioPause">
+      <action name="Execute" command="playerctl play-pause" />
+    </keybind>
+    <keybind key="XF86AudioPlay">
+      <action name="Execute" command="playerctl play-pause" />
+    </keybind>
+    <keybind key="XF86AudioPrev">
+      <action name="Execute" command="playerctl previous" />
+    </keybind>
+  </keyboard>
+
+  <mouse>
+    <doubleClickTime>500</doubleClickTime>
+    <context name="Frame">
+      <mousebind button="W-Left" action="Press">
+        <action name="Focus" />
+        <action name="Raise" />
+      </mousebind>
+      <mousebind button="W-Left" action="Drag">
+        <action name="Move" />
+      </mousebind>
+      <mousebind button="W-Right" action="Press">
+        <action name="Focus" />
+        <action name="Raise" />
+      </mousebind>
+      <mousebind button="W-Right" action="Drag">
+        <action name="Resize" />
+      </mousebind>
+    </context>
+  </mouse>
+
+  <windowRules>
+    <!-- Steam Big Picture - float and fullscreen -->
+    <windowRule identifier="steam" title="Steam Big Picture">
+      <action name="ToggleFloating" />
+      <action name="ToggleMaximize" />
+    </windowRule>
+
+    <!-- No focus on XWayland -->
+    <windowRule identifier="xwayland*" noInitialFocus="yes" />
+
+    <!-- Float all windows by default (matching your hyprland config) -->
+    <windowRule identifier="*" floating="yes" />
+  </windowRules>
+
+</labwc_config>

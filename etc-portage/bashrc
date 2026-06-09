@@ -1,0 +1,13 @@
+post_pkg_postinst() {
+    if [[ ${CATEGORY}/${PN} == sys-kernel/cachyos-sources ]]; then
+        cd /usr/src/linux || exit
+
+        export ARCH=x86
+
+        make olddefconfig
+        make -j$(nproc)
+
+        make modules_install
+        make install
+    fi
+}

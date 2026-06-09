@@ -1,0 +1,1 @@
+/home/ram/.config/hyprlock/layouts/layout2/Scripts/songdetail.sh

@@ -1,0 +1,8 @@
+# Disable 32-bit ABI for the whole LLVM toolchain
+llvm-runtimes/openmp -abi_x86_32
+llvm-runtimes/compiler-rt -abi_x86_32
+llvm-runtimes/compiler-rt-sanitizers -abi_x86_32
+llvm-core/clang-runtime -abi_x86_32
+llvm-core/clang -abi_x86_32
+llvm-core/llvm -abi_x86_32
+llvm-core/libclc -abi_x86_32

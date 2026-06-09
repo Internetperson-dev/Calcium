@@ -1,0 +1,2 @@
+TERMINFO_DIRS="/usr/share/st/terminfo"
+COLON_SEPARATED="TERMINFO_DIRS"

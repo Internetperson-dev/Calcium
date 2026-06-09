@@ -1,0 +1,247 @@
+# Luke's lf settings
+
+# =========================
+# Image Preview Notes
+# =========================
+# 1. ueberzug installed
+# 2. scope configured
+# 3. cleaner configured
+# 4. lf started via wrapper (lfub)
+
+# =========================
+# Basic vars
+# =========================
+set shellopts '-eu'
+set ifs "\n"
+set scrolloff 10
+set icons
+set period 1
+set hiddenfiles ".*:*.aux:*.log:*.bbl:*.bcf:*.blg:*.run.xml"
+set cleaner '~/.config/lf/cleaner'
+set previewer '~/.config/lf/scope'
+set autoquit true
+
+# =========================
+# Commands / Functions
+# =========================
+
+cmd open ${{
+    case $(file --mime-type "$(readlink -f $f)" -b) in
+
+        # =====================
+        # Linux executables -> run in terminal
+        # =====================
+        application/x-executable|application/x-pie-executable)
+            [ -x "$f" ] || exit
+            setsid -f $TERMINAL -e "$f" >/dev/null 2>&1
+            ;;
+
+        application/vnd.openxmlformats-officedocument.spreadsheetml.sheet)
+            localc $fx
+            ;;
+
+        image/vnd.djvu|application/pdf|application/postscript)
+            setsid -f zathura $fx >/dev/null 2>&1
+            ;;
+
+        text/*|application/json|inode/x-empty|application/x-subrip)
+            $EDITOR $fx
+            ;;
+
+        image/x-xcf)
+            setsid -f gimp $f >/dev/null 2>&1
+            ;;
+
+        image/svg+xml)
+            display -- $f
+            ;;
+
+        image/*)
+            flatpak run org.gnome.Loupe $f | \
+                grep -i "\.\(jpg\|jpeg\|gif\|webp\|avif\|tif\|ico\)\(_large\)*$" | \
+                setsid -f flatpak run org.gnome.Loupe -aio 2>/dev/null | \
+                while read -r file; do
+                    [ -z "$file" ] && continue
+                    lf -remote "send select \"$file\""
+                    lf -remote "send toggle"
+                done &
+            ;;
+
+        audio/*|video/x-ms-asf)
+            flatpak run io.mpv.Mpv --audio-display=no $f
+            ;;
+
+        video/*)
+            setsid -f flatpak run io.mpv.Mpv $f -quiet >/dev/null 2>&1
+            ;;
+
+        application/pdf|application/vnd.djvu|application/epub*)
+            librewolf $fx >/dev/null 2>&1
+            ;;
+
+        application/pgp-encrypted)
+            $EDITOR $fx
+            ;;
+
+        application/vnd.openxmlformats-officedocument.wordprocessingml.document|\
+        application/vnd.oasis.opendocument.text|\
+        application/vnd.openxmlformats-officedocument.spreadsheetml.sheet|\
+        application/vnd.oasis.opendocument.spreadsheet|\
+        application/vnd.oasis.opendocument.spreadsheet-template|\
+        application/vnd.openxmlformats-officedocument.presentationml.presentation|\
+        application/vnd.oasis.opendocument.presentation-template|\
+        application/vnd.oasis.opendocument.presentation|\
+        application/vnd.ms-powerpoint|\
+        application/vnd.oasis.opendocument.graphics|\
+        application/vnd.oasis.opendocument.graphics-template|\
+        application/vnd.oasis.opendocument.formula|\
+        application/vnd.oasis.opendocument.database)
+            setsid -f libreoffice $fx >/dev/null 2>&1
+            ;;
+
+        application/octet-stream)
+            case ${f##*.} in
+
+                # =====================
+                # Windows executables (SAFE)
+                # =====================
+                exe|EXE)
+                    clear
+                    tput bold
+                    printf "Run Windows executable with Wine?\n\n%s\n\n[y/N] " "$f"
+                    read -r ans
+                    [ "$ans" = "y" ] || exit 0
+                    setsid -f wine "$f" >/dev/null 2>&1
+                    ;;
+
+                doc|docx|xls|xlsx|odt|ppt|pptx)
+                    setsid -f libreoffice $fx >/dev/null 2>&1
+                    ;;
+
+                ghw)
+                    setsid -f gtkwave $f >/dev/null 2>&1
+                    ;;
+
+                ts)
+                    setsid -f mpv $f -quiet >/dev/null 2>&1
+                    ;;
+
+                *)
+                    setsid -f zathura $fx >/dev/null 2>&1
+                    ;;
+            esac
+            ;;
+
+        *)
+            for f in $fx; do
+                setsid -f $OPENER $f >/dev/null 2>&1
+            done
+            ;;
+    esac
+}}
+
+cmd mkdir $mkdir -p "$@"
+
+cmd extract ${{
+    clear; tput cup $(($(tput lines)/3)); tput bold
+    set -f
+    printf "%s\n\t" "$fx"
+    printf "extract?[y/N]"
+    read ans
+    [ "$ans" = "y" ] && {
+        case $fx in
+            *.tar.bz2) tar xjf $fx ;;
+            *.tar.gz)  tar xzf $fx ;;
+            *.bz2)     bunzip2 $fx ;;
+            *.rar)     unrar e $fx ;;
+            *.gz)      gunzip $fx ;;
+            *.tar)     tar xf $fx ;;
+            *.tbz2)    tar xjf $fx ;;
+            *.tgz)     tar xzf $fx ;;
+            *.zip)     unzip $fx ;;
+            *.Z)       uncompress $fx ;;
+            *.7z)      7z x $fx ;;
+            *.tar.xz)  tar xf $fx ;;
+        esac
+    }
+}}
+
+cmd delete ${{
+    clear; tput cup $(($(tput lines)/3)); tput bold
+    set -f
+    printf "%s\n\t" "$fx"
+    printf "delete?[y/N]"
+    read ans
+    [ "$ans" = "y" ] && rm -rf -- $fx
+}}
+
+# =========================
+# Cut / Paste Move
+# =========================
+
+cmd cut ${{
+    printf "%s\n" "$fx" > "${XDG_CACHE_HOME:-$HOME/.cache}/lf_move"
+    notify-send "✂️ Cut" "$(wc -l < "${XDG_CACHE_HOME:-$HOME/.cache}/lf_move") file(s) ready to move"
+}}
+
+cmd pastecut ${{
+    dest=$(pwd)
+    while IFS= read -r file; do
+        [ -e "$file" ] && mv -iv "$file" "$dest"
+    done < "${XDG_CACHE_HOME:-$HOME/.cache}/lf_move"
+    rm -f "${XDG_CACHE_HOME:-$HOME/.cache}/lf_move"
+    notify-send "🚚 Moved" "Files moved to $dest"
+    lf -remote "send $id reload"
+}}
+
+# =========================
+# Bindings
+# =========================
+
+map l open
+map <right> open
+
+map <c-f> $lf -remote "send $id select \"$(fzf)\""
+map J $lf -remote "send $id cd $(sed -e 's/\s*#.*//' -e '/^$/d' -e 's/^\S*\s*//' ${XDG_CONFIG_HOME:-$HOME/.config}/shell/bm-dirs | fzf)"
+map H cd ~
+map g top
+map d !dragon -x "$f"
+map D delete
+map E extract
+map C copyto
+map M cut
+map P pastecut
+map <c-n> push :mkdir<space>""<left>
+map <c-r> reload
+map <c-s> set hidden!
+map <enter> shell
+map x $$f
+map X !$f
+map o &mimeopen "$f"
+map O $mimeopen --ask "$f"
+
+map A :rename; cmd-end
+map c push A<c-u>
+map I :rename; cmd-home
+map i :rename
+map a :rename; cmd-right
+map B bulkrename
+map b $setbg $f
+
+map <c-e> down
+map <c-y> up
+map V push :!nvim<space>
+
+map W $setsid -f $TERMINAL >/dev/null 2>&1
+
+map U $printf "%s" "$fx" | xclip -selection clipboard
+map u $printf "%s" "$fx" | sed 's/.*\///' | xclip -selection clipboard
+
+map T $nsxiv -t "$(pwd)"
+map <c-l> unselect
+
+# =========================
+# Source Bookmarks
+# =========================
+
+source "~/.config/lf/shortcutrc"

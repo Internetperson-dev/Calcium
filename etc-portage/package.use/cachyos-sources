@@ -1,0 +1,29 @@
+# Enable AutoFDO and Propeller profiling for performance
+sys-kernel/cachyos-sources autofdo propeller
+
+# Enable BBRv3 TCP congestion control
+sys-kernel/cachyos-sources bbr3
+
+# Enable BORE scheduler
+sys-kernel/cachyos-sources bore
+
+# Enable hugepages always
+sys-kernel/cachyos-sources hugepage_always
+
+# Kernel tick rate 1000Hz
+sys-kernel/cachyos-sources hz_ticks_1000
+
+# Thin LTO via LLVM/Clang
+sys-kernel/cachyos-sources llvm-lto-thin
+
+# Compiler optimizations for CPU
+sys-kernel/cachyos-sources mnative o3
+
+# Per-CPU governor optimizations
+sys-kernel/cachyos-sources per-gov
+
+# Fully preemptible kernel for responsiveness
+sys-kernel/cachyos-sources preempt_full
+
+# Apply full tickrate optimizations
+sys-kernel/cachyos-sources tickrate_full

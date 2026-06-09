@@ -1,0 +1,157 @@
+{
+	"layer": "top",
+	"position":"top",
+	"modules-left": ["custom/logo","hyprland/window","custom/appmenu"],
+	/*"modules-center": ["hyprland/workspaces"], */
+	/*"modules-right": ["tray","mpris","power-profiles-daemon","network","wireplumber","backlight","battery","clock"],*/
+	"modules-right": ["tray","mpris","network","wireplumber","backlight","clock"],
+	"reload_style_on_change":true,
+	"margin-bottom":0,
+	"margin-top":0,
+	"margin-left":0,
+	"wireplumber": {
+		"ignored-sinks": ["Easy Effects Sink"], 
+	    "format-muted": "",
+	    "format": "{icon}",
+	    "tooltip-format": "{volume}%",
+	    "on-click": "pactl set-sink-mute @DEFAULT_SINK@ toggle",
+		"on-click-right": "pavucontrol-qt",
+	    "max-volume": 100,
+	    "format-icons": {
+	    	"headphone":"",
+	    	"headset": "",
+	    	"phone": "",
+	    	"phone-muted": "",
+	    	"portable": "",
+	    	"car": "",
+	    	"default":["","","","","","","","",""],
+	    },
+	    "reverse-scrolling": true,
+	    "justify": "center",
+	    "scroll-step": 1,
+	    "smooth-scrolling-threshold": 1
+	},
+	"backlight": {
+		"reverse-scrolling": true,
+		"scroll-step": 1,
+		"smooth-scrolling-threshold": 0.5,
+	    "device": "intel_backlight",
+	   	"justify": "center",
+	    "format": "󰍹",
+	    "tooltip":false,
+	},
+	"tray": {
+		"spacing":20,
+	},
+	"clock": {
+        "format": "{:%a %b %d  %I:%M %p}",
+        "tooltip":false,
+        "on-click":"swaync-client -t"
+	},
+	"power-profiles-daemon": {
+	  "format": "{icon}",
+	  "tooltip-format": "Power profile: {profile}",
+	  "tooltip": true,
+	  "format-icons": {
+	    "performance": "",
+	    "balanced": "",
+	    "power-saver": ""
+	  }
+	},
+	"hyprland/window": {
+	    "format": "{class}",
+	    "rewrite": {
+	        "foot": "Terminal",
+	        "floatterm": "Terminal",
+	       	"firefox": "Firefox",
+	       	"teams-for-linux":"Microsoft Teams",
+	       	"org.kde.okular": "Okular",
+	       	"org.kde.gwenview": "Photos",
+	       	"spotify":"Spotify",
+	       	"pavucontrol-qt":"Audio Panel",
+	       	"fusion360.exe":"Fusion 360",
+	       	"kdesystemsettings": "Preferences",
+	       	"org.kde.dolphin": "Finder",
+	       	"org.fooyin.fooyin": "Fooyin",
+	       	"org.kde.knights":"Knights",
+	       	"com.github.flxzt.rnote":"RNote",
+	       	"com.missioncenter.MissionCenter":"Task Manager",
+	       	"org.kde.iconexplorer":"Icons",
+	       	"":"Finder",
+	        "(.*) - fish": "> [$1]"
+	    },
+	    "separate-outputs": false,
+	    "tooltip": false,
+	},
+	"hyprland/workspaces": {
+		"format": "{icon}",
+		"show-special":true,
+		"format-icons": {
+			"default": "󱓼",
+			"discord": "󰍩",
+			"kden": "󱛿",
+			"obs": "",
+			"spotify": "󰝚",
+			"windows": "",
+			"game": "󰮂",
+			"code":"󰨞",
+			"note":"",
+		},
+		"on-click": "activate",
+	},
+	"mpris": {
+		"format": "{player_icon} {title}",
+		"format-paused": "{status_icon} {title}",
+		"tooltip":false,
+		"status-icons": {
+			"paused": "󰏤",
+			"playing": "󰎈"
+		},
+		"player-icons": {
+			"default": "󰎈",
+			"spotify": "󰓇  ",
+			"io": "󰫔",
+			"firefox": "",
+		},
+		"max-length":16,
+		"tooltip-format": "{status_icon} {title} - {artist} - {player}",
+	},
+	"battery": {
+		"format": "{icon}",
+		"format-icons": ["", "", "", "", ""],
+		"format-charging": "󰢝",
+		"on-click": "foot -a floatterm -e battop",
+		"justify": "center",
+	},
+	"network": {
+		"format-wifi": "",
+		"format-ethernet": "󰈀",
+		"format": "",
+		"tooltip":false,
+		"tooltip-format": "{signaldBm}dBm {essid} {frequency}GHz",
+		"on-click": "foot -a floatterm -e nmtui connect",
+
+		"on-click-right": "nm-connection-editor",
+
+	},
+	"custom/logo": {
+	    "format" : "",
+        "tooltip": false,
+        "menu": "on-click",
+        "menu-file": "~/.config/waybar/menus/logo_menu.xml",
+        "menu-actions": {
+            "about": "~/.config/waybar/scripts/about_mac",
+            "settings":"systemsettings",
+            "apps":"plasma-discover",
+            "sleep": "systemctl suspend",
+           	"reboot": "systemctl reboot",
+            "shutdown": "systemctl shutdown",
+            "force": "hyprctl dispatch killactive",
+            "lock": "hyprlock"
+        },
+	},
+	"custom/appmenu": {
+		"format" :"File    Edit    View    Go    Window    Help",
+        "tooltip": false,
+	},
+}

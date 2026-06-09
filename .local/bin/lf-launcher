@@ -1,0 +1,2 @@
+#!/bin/bash
+foot -e lf "$1"  # or use your preferred terminal: xterm, kitty, alacritty

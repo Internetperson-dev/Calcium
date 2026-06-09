@@ -1,0 +1,6 @@
+{
+  "enable-linux-desktop": true,
+  "enable-web": true,
+  "enable-macos-desktop": true,
+  "enable-windows-desktop": true
+}
