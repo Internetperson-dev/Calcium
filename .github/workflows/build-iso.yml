@@ -27,7 +27,7 @@ jobs:
 
       - name: Configure Portage
         run: |
-          rsync -a calcium/etc-portage/ /etc/portage/ --exclude=repos.conf --exclude=make.conf
+          mkdir -p /tmp/portage /tmp/distfiles
           printf '%s\n' \
             'COMMON_FLAGS="-O2 -pipe"' \
             'CFLAGS="${COMMON_FLAGS}"' \
@@ -35,31 +35,22 @@ jobs:
             'FCFLAGS="${COMMON_FLAGS}"' \
             'FFLAGS="${COMMON_FLAGS}"' \
             'USE="elogind -systemd"' \
-            'ABI_X86="32 64"' \
-            'FEATURES="getbinpkg -binpkg-request-signature"' \
-            'EMERGE_DEFAULT_OPTS="--quiet-build --getbinpkg --usepkg --binpkg-respect-use=n --verbose"' \
+            'FEATURES="-binpkg-request-signature"' \
+            'EMERGE_DEFAULT_OPTS="--quiet-build --usepkg --verbose"' \
             'ACCEPT_KEYWORDS="~amd64"' \
             'LC_MESSAGES=C.utf8' \
             "MAKEOPTS=-j$(nproc)" \
             'PORTAGE_TMPDIR=/tmp/portage' \
             'DISTDIR=/tmp/distfiles' \
             > /etc/portage/make.conf
-          mkdir -p /tmp/portage /tmp/distfiles
 
       - name: Sync Portage Tree
         run: |
           emerge-webrsync
-          rsync -a calcium/etc-portage/repos.conf/ /etc/portage/repos.conf/
-          emaint sync -a || true
 
       - name: Install Build Dependencies
         run: |
-          mkdir -p /etc/portage/package.use
-          printf '%s\n' \
-            '>=sys-libs/zlib-ng-2.3.3 compat' \
-            'dev-python/pillow -truetype' \
-            > /etc/portage/package.use/build
-          emerge -q sys-kernel/gentoo-sources sys-kernel/dracut sys-boot/grub --autounmask-backtrack=y
+          emerge -q sys-kernel/gentoo-sources sys-kernel/dracut sys-boot/grub
 
       - name: Build Kernel with Custom Config
         run: |
