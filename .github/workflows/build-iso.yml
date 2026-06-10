@@ -27,7 +27,7 @@ jobs:
 
       - name: Configure Portage
         run: |
-          rsync -a calcium/etc-portage/ /etc/portage/
+          rsync -a calcium/etc-portage/ /etc/portage/ --exclude=repos.conf
           mkdir -p /tmp/portage /tmp/distfiles
           echo 'PORTAGE_TMPDIR=/tmp/portage' >> /etc/portage/make.conf
           echo 'DISTDIR=/tmp/distfiles' >> /etc/portage/make.conf
@@ -36,8 +36,7 @@ jobs:
       - name: Sync Portage Tree
         run: |
           emerge-webrsync
-          eselect repository enable guru 2>/dev/null || true
-          eselect repository enable CachyOS-kernels 2>/dev/null || true
+          rsync -a calcium/etc-portage/repos.conf/ /etc/portage/repos.conf/
           emaint sync -a || true
 
       - name: Install Build Dependencies
