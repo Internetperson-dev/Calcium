@@ -64,6 +64,7 @@ jobs:
 
       - name: Assemble Bootable ISO
         run: |
+          KVER=$(ls -1 /lib/modules/ | sort -V | tail -1)
           mkdir -p /iso-root/boot/grub
 
           cp /boot/vmlinuz-* /iso-root/boot/
@@ -81,13 +82,13 @@ jobs:
             'insmod part_gpt' \
             '' \
             'menuentry "Gentoo Linux (Custom Build)" {' \
-            '  linux /boot/vmlinuz-* root=UUID=1234 ro quiet rd.vconsole.keymap=uk' \
-            '  initrd /boot/amd-uc.img /boot/initramfs*' \
+            "  linux /boot/vmlinuz-${KVER} root=UUID=1234 ro quiet rd.vconsole.keymap=uk" \
+            "  initrd /boot/amd-uc.img /boot/initramfs.img" \
             '}' \
             '' \
             'menuentry "Gentoo Linux (Rescue Mode)" {' \
-            '  linux /boot/vmlinuz-* root=UUID=1234 ro single rd.shell rd.debug' \
-            '  initrd /boot/amd-uc.img /boot/initramfs*' \
+            "  linux /boot/vmlinuz-${KVER} root=UUID=1234 ro single rd.shell rd.debug" \
+            "  initrd /boot/amd-uc.img /boot/initramfs.img" \
             '}' \
             > /iso-root/boot/grub/grub.cfg
 
