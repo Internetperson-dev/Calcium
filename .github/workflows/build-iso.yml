@@ -26,7 +26,8 @@ jobs:
 
       - name: Configure Portage
         run: |
-          cp -ra calcium/etc-portage/* /etc/portage/
+          cp -ra calcium/etc-portage/* /etc/portage/ 2>/dev/null || true
+          rm -rf /etc/portage/repos.conf /etc/portage/gnupg /etc/portage/make.profile
           ln -sfn ../../var/db/repos/gentoo/profiles/default/linux/amd64/23.0/desktop /etc/portage/make.profile
           mkdir -p /tmp/portage /tmp/distfiles
 
@@ -53,6 +54,7 @@ jobs:
       - name: Sync Portage Tree
         run: |
           emerge-webrsync
+          cp -ra calcium/etc-portage/repos.conf/* /etc/portage/repos.conf/
           eselect repository enable guru 2>/dev/null || true
           eselect repository enable CachyOS-kernels 2>/dev/null || true
           eselect repository enable hyproverlay 2>/dev/null || true
