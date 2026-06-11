@@ -28,7 +28,8 @@ jobs:
         run: |
           cp -ra calcium/etc-portage/* /etc/portage/ 2>/dev/null || true
           rm -rf /etc/portage/repos.conf /etc/portage/gnupg /etc/portage/make.profile
-          rm -f /etc/portage/package.use/python
+          rm -f /etc/portage/package.use/python /etc/portage/package.use/no-multilib
+          echo 'sys-apps/systemd' > /etc/portage/package.mask/systemd
           ln -sfn ../../var/db/repos/gentoo/profiles/default/linux/amd64/23.0/desktop /etc/portage/make.profile
           mkdir -p /tmp/portage /tmp/distfiles
 
@@ -60,7 +61,7 @@ jobs:
 
       - name: Install System Base
         run: |
-          PACKAGES="sys-kernel/gentoo-kernel-bin sys-kernel/linux-firmware sys-kernel/dracut sys-boot/limine dev-libs/libisoburn sys-auth/elogind sys-auth/seatd app-shells/zsh dev-vcs/git"
+          PACKAGES="sys-kernel/gentoo-kernel-bin sys-kernel/linux-firmware sys-kernel/dracut sys-boot/limine dev-libs/libisoburn sys-auth/elogind app-shells/zsh dev-vcs/git"
           for i in 1 2 3 4 5; do
             emerge --autounmask-write -q $PACKAGES && break
             echo "Autounmask pass $i done, merging changes and retrying..."
