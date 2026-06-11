@@ -49,7 +49,7 @@ jobs:
             'INSTALLKERNEL_INITRD_GENERATOR="dracut"' \
             'PORTAGE_TMPDIR=/tmp/portage' \
             'DISTDIR=/tmp/distfiles' \
-            'EMERGE_DEFAULT_OPTS="--quiet-build --usepkg --verbose --autounmask-backtrack=y"' \
+            'EMERGE_DEFAULT_OPTS="--quiet-build --usepkg --verbose --autounmask-backtrack=y --backtrack=100 --binpkg-respect-use=n"' \
             >> /etc/portage/make.conf
 
       - name: Sync Portage Tree
