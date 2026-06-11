@@ -65,34 +65,22 @@ jobs:
 
       - name: Install System Base
         run: |
+          export CONFIG_PROTECT_SKIP="/etc/portage"
           PACKAGES="sys-kernel/gentoo-kernel-bin sys-kernel/linux-firmware sys-kernel/dracut sys-boot/limine dev-libs/libisoburn sys-auth/elogind sys-auth/seatd app-shells/zsh dev-vcs/git"
-          emerge --autounmask-write -q $PACKAGES; rc=$?
-          if [ $rc -ne 0 ]; then
-            find /etc/portage -name '._cfg*' | while read f; do
-              mv "$f" "$(dirname "$f")/$(basename "$f" | sed 's/^\._cfg0000_//')"
-            done
-            emerge -q $PACKAGES
-          fi
+          emerge --autounmask-write -q $PACKAGES 2>&1 || true
+          emerge -q $PACKAGES
 
       - name: Install World Packages
         run: |
-          emerge --autounmask-write -uDN --with-bdeps=y @world; rc=$?
-          if [ $rc -ne 0 ]; then
-            find /etc/portage -name '._cfg*' | while read f; do
-              mv "$f" "$(dirname "$f")/$(basename "$f" | sed 's/^\._cfg0000_//')"
-            done
-            emerge -uDN --with-bdeps=y @world
-          fi
+          export CONFIG_PROTECT_SKIP="/etc/portage"
+          emerge --autounmask-write -uDN --with-bdeps=y @world 2>&1 || true
+          emerge -uDN --with-bdeps=y @world
 
       - name: Install NVIDIA Drivers
         run: |
-          emerge --autounmask-write -q x11-drivers/nvidia-drivers; rc=$?
-          if [ $rc -ne 0 ]; then
-            find /etc/portage -name '._cfg*' | while read f; do
-              mv "$f" "$(dirname "$f")/$(basename "$f" | sed 's/^\._cfg0000_//')"
-            done
-            emerge -q x11-drivers/nvidia-drivers
-          fi
+          export CONFIG_PROTECT_SKIP="/etc/portage"
+          emerge --autounmask-write -q x11-drivers/nvidia-drivers 2>&1 || true
+          emerge -q x11-drivers/nvidia-drivers
 
       - name: Create NVIDIA Dracut Config
         run: |
