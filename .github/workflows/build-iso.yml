@@ -64,17 +64,21 @@ jobs:
 
       - name: Install System Base
         run: |
-          emerge -q sys-kernel/gentoo-kernel-bin sys-kernel/linux-firmware \
-            sys-kernel/dracut sys-boot/limine dev-libs/libisoburn \
-            sys-auth/elogind sys-auth/seatd \
-            app-shells/zsh dev-vcs/git
+          PACKAGES="sys-kernel/gentoo-kernel-bin sys-kernel/linux-firmware sys-kernel/dracut sys-boot/limine dev-libs/libisoburn sys-auth/elogind sys-auth/seatd app-shells/zsh dev-vcs/git"
+          emerge --autounmask-write -q $PACKAGES 2>&1 || true
+          find /etc/portage -name '._cfg*' | while read f; do mv "$f" "${f%/*}/${f#*/._cfg0000_}"; done 2>/dev/null || true
+          emerge -q $PACKAGES
 
       - name: Install World Packages
         run: |
+          emerge --autounmask-write -uDN --with-bdeps=y @world 2>&1 || true
+          find /etc/portage -name '._cfg*' | while read f; do mv "$f" "${f%/*}/${f#*/._cfg0000_}"; done 2>/dev/null || true
           emerge -uDN --with-bdeps=y @world
 
       - name: Install NVIDIA Drivers
         run: |
+          emerge --autounmask-write -q x11-drivers/nvidia-drivers 2>&1 || true
+          find /etc/portage -name '._cfg*' | while read f; do mv "$f" "${f%/*}/${f#*/._cfg0000_}"; done 2>/dev/null || true
           emerge -q x11-drivers/nvidia-drivers
 
       - name: Create NVIDIA Dracut Config

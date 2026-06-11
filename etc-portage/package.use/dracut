@@ -1,1 +1,2 @@
 sys-kernel/dracut -systemd
+sys-kernel/installkernel dracut
