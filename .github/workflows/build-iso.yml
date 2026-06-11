@@ -54,6 +54,7 @@ jobs:
       - name: Sync Portage Tree
         run: |
           emerge-webrsync
+          mkdir -p /etc/portage/repos.conf
           cp -ra calcium/etc-portage/repos.conf/* /etc/portage/repos.conf/
           eselect repository enable guru 2>/dev/null || true
           eselect repository enable CachyOS-kernels 2>/dev/null || true
