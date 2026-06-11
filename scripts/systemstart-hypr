@@ -1,0 +1,177 @@
+#!/bin/bash
+# systemstart-hypr - RamOS startup script with robust error handling
+
+set -e
+
+# GCC troubleshooting: print version & source latest
+if command -v gcc-config >/dev/null 2>&1; then
+    doas gcc-config -l
+    doas gcc-config -c
+    doas gcc-config latest
+    source /etc/profile
+fi
+
+echo "Using GCC version:"
+gcc --version || echo "Warning: gcc not found"
+
+# Logging / sysrq
+doas sh <<'EOF'
+dmesg -wH > ~/kernal_live.log &
+if ! rc-update show default | grep -q '^ *syslog-ng'; then
+    rc-update add syslog-ng default
+fi
+if ! rc-service syslog-ng status >/dev/null 2>&1; then
+    rc-service syslog-ng start
+fi
+if [ "$(cat /proc/sys/kernel/sysrq)" != "1" ]; then
+    echo 1 > /proc/sys/kernel/sysrq
+fi
+EOF
+
+logger "syslog test from ram"
+
+# DBus early
+dbus-launch &
+
+# Detect root device
+rootline=$(lsblk -rno NAME,MOUNTPOINT | awk '$2=="/"{print $1}')
+rootdev=$(echo "$rootline" | sed -E 's/p?[0-9]+$//; s/^luks-.*$/sda/')
+echo "Root device: $rootdev"
+
+# NVMe unlock with password prompt
+mount_nvme() {
+    DATA_DEV=/dev/nvme0n1p3
+    DATA_NAME=luks-data
+    NVME_MOUNT=/mnt/nvme
+
+    doas mkdir -p "$NVME_MOUNT"
+
+    if ! cryptsetup status "$DATA_NAME" >/dev/null 2>&1; then
+        echo "NVMe locked, prompting for password..."
+        xdg-terminal -e "doas cryptsetup luksOpen $DATA_DEV $DATA_NAME" 2>/dev/null || \
+        alacritty -e doas cryptsetup luksOpen "$DATA_DEV" "$DATA_NAME" 2>/dev/null || \
+        kitty -e doas cryptsetup luksOpen "$DATA_DEV" "$DATA_NAME" 2>/dev/null || \
+        xterm -e doas cryptsetup luksOpen "$DATA_DEV" "$DATA_NAME"
+    fi
+
+    mountpoint -q "$NVME_MOUNT" || doas mount /dev/mapper/$DATA_NAME "$NVME_MOUNT"
+}
+
+# Post-Hyprland autostart
+autostart() {
+    sunshine.AppImage >/dev/null 2>&1 &
+
+    steam_watcher() {
+        while true; do
+            while ! pgrep -f "com.valvesoftware.Steam" >/dev/null; do
+                sleep 3
+            done
+            echo "Steam detected -> starting Decky"
+            ~/.local/bin/RamOS/decky-installer >/dev/null 2>&1 &
+
+            while pgrep -f "com.valvesoftware.Steam" >/dev/null; do
+                sleep 5
+            done
+            echo "Steam closed -> stopping Decky"
+            pkill -f decky-installer
+            sleep 2
+        done
+    }
+    steam_watcher >/dev/null 2>&1 &
+
+    gentoo-pipewire-launcher restart &
+
+    dbus-run-session -- xdg-desktop-portal &
+    sleep 1
+    dbus-run-session -- xdg-desktop-portal-hyprland &
+
+    (
+        while true; do
+            sleep 3
+            pgrep -x pipewire > /dev/null || gentoo-pipewire-launcher restart &
+            pgrep -x sfwbar > /dev/null || sfwbar &
+        done
+    ) &
+
+    wait
+}
+
+# Device-specific logic
+case "$rootdev" in
+
+nvme*)
+    echo "Boot device is NVMe"
+
+    CONFIG="$HOME/.config/RamOS/update"
+    mkdir -p /mnt/boot/efi
+
+    doas sh -c "$(declare -f mount_nvme); mount_nvme"
+
+    doas ./amd-thermal-throttle.sh || echo "Thermal throttling failed"
+
+    doas modprobe uhid || echo "PS5 controller fix failed"
+
+    doas faillock --user ram --reset || echo "Faillock reset failed"
+    getcap /usr/bin/swaylock /usr/bin/swaylock
+    mkdir -p ~/.config/zsh
+    cat ~/.config/zsh/history || true
+
+    xdg-mime default pcmanfm.desktop inode/directory
+
+    if [ -f "$CONFIG" ]; then
+        VALUE=$(grep -E '^autoupdate *= *' "$CONFIG" | awk -F= '{print $2}' | tr -d '[:space:]')
+        if [ "$VALUE" = "true" ]; then
+            echo "Autoupdate enabled"
+            flatpak update -y
+            pip install -U yt-dlp
+            for app in ~/.local/appimage/*.AppImage; do
+                appimageupdatetool-x86_64.AppImage "$app" --overwrite
+            done &
+        else
+            echo "Autoupdate disabled"
+        fi
+    else
+        echo "Config file not found: $CONFIG"
+    fi
+
+    mkdir -p ~/.local/bin
+    for f in ~/.local/appimage/*.AppImage; do
+        [ -f "$f" ] && ln -sf "$f" ~/.local/bin/
+    done
+
+    dbus-run-session -- Hyprland &
+    sleep 1
+    ~/.local/bin/xdg-portal-monitor &
+    doas mount /dev/sda1 /boot/efi
+    autostart
+    ;;
+
+sd*)
+    echo "Boot device is SATA/SCSI"
+
+    doas sh <<'EOF'
+mkdir -p /mnt/nvme /run/media/$USER/nvme
+u=$(cryptsetup luksUUID /dev/nvme0n1p3) || echo "Failed to get NVMe UUID"
+if ! cryptsetup status "luks-$u" >/dev/null 2>&1; then
+    cryptsetup luksOpen /dev/nvme0n1p3 "luks-$u" || echo "Failed to open LUKS NVMe"
+fi
+mountpoint -q /mnt/nvme || mount /dev/mapper/luks-$u /mnt/nvme || echo "Failed to mount NVMe"
+EOF
+
+    dbus-run-session -- Hyprland &
+    sleep 1
+    ~/.local/bin/xdg-portal-monitor &
+    doas mount /dev/sda1 /boot/efi
+    autostart
+
+    wait
+    ;;
+
+mmcblk*)
+    echo "Boot device is SD/eMMC"
+    ;;
+
+*)
+    echo "Unknown device type: $rootdev"
+    ;;
+esac

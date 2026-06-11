@@ -14,7 +14,7 @@ jobs:
     container:
       image: gentoo/stage3:latest
       options: --privileged
-    timeout-minutes: 180
+    timeout-minutes: 360
 
     steps:
       - uses: actions/checkout@v4
@@ -22,45 +22,73 @@ jobs:
           path: calcium
 
       - name: Recombine Split Files
-        run: |
-          bash calcium/scripts/recombine.sh calcium
+        run: bash calcium/scripts/recombine.sh calcium
 
       - name: Configure Portage
         run: |
+          cp -ra calcium/etc-portage/* /etc/portage/
+          ln -sfn ../../var/db/repos/gentoo/profiles/default/linux/amd64/23.0/desktop /etc/portage/make.profile
           mkdir -p /tmp/portage /tmp/distfiles
+
+      - name: Set make.conf
+        run: |
+          > /etc/portage/make.conf
           printf '%s\n' \
             'COMMON_FLAGS="-O2 -pipe"' \
             'CFLAGS="${COMMON_FLAGS}"' \
             'CXXFLAGS="${COMMON_FLAGS}"' \
             'FCFLAGS="${COMMON_FLAGS}"' \
             'FFLAGS="${COMMON_FLAGS}"' \
-            'USE="elogind -systemd"' \
-            'FEATURES="-binpkg-request-signature"' \
-            'EMERGE_DEFAULT_OPTS="--quiet-build --usepkg --verbose"' \
-            'ACCEPT_KEYWORDS="~amd64"' \
+            'USE="wayland pipewire pulseaudio X flatpak elogind -systemd gnutls"' \
             'LC_MESSAGES=C.utf8' \
+            'FEATURES="getbinpkg binpkg-request-signature"' \
+            'ACCEPT_KEYWORDS="~amd64"' \
             "MAKEOPTS=-j$(nproc)" \
+            'INSTALLKERNEL_INITRD_GENERATOR="dracut"' \
             'PORTAGE_TMPDIR=/tmp/portage' \
             'DISTDIR=/tmp/distfiles' \
-            > /etc/portage/make.conf
+            'EMERGE_DEFAULT_OPTS="--quiet-build --usepkg --verbose --autounmask-backtrack=y"' \
+            >> /etc/portage/make.conf
 
       - name: Sync Portage Tree
         run: |
           emerge-webrsync
+          eselect repository enable guru 2>/dev/null || true
+          eselect repository enable CachyOS-kernels 2>/dev/null || true
+          eselect repository enable hyproverlay 2>/dev/null || true
+          eselect repository enable pingwho-overlay 2>/dev/null || true
+          emaint sync -a 2>/dev/null || true
 
-      - name: Install Build Dependencies
+      - name: Install System Base
         run: |
-          emerge -q sys-kernel/gentoo-sources sys-kernel/dracut sys-boot/grub
+          emerge -q sys-kernel/gentoo-kernel-bin sys-kernel/linux-firmware \
+            sys-kernel/dracut sys-boot/limine dev-libs/libisoburn \
+            sys-apps/elogind sys-auth/seatd \
+            app-shells/zsh dev-vcs/git
 
-      - name: Build Kernel with Custom Config
+      - name: Install World Packages
         run: |
-          KSRC=$(ls -1d /usr/src/linux-* 2>/dev/null | sort -V | tail -1)
-          echo "Kernel source tree: $KSRC"
-          cp calcium/boot-6-15-7/config-6.15.7-gentoo-dist "$KSRC/.config"
-          cd "$KSRC"
-          make olddefconfig
-          make -j$(nproc) bzImage modules
-          make modules_install install
+          emerge -uDN --with-bdeps=y @world
+
+      - name: Install NVIDIA Drivers
+        run: |
+          emerge -q x11-drivers/nvidia-drivers
+
+      - name: Create NVIDIA Dracut Config
+        run: |
+          mkdir -p /etc/dracut.conf.d
+          printf '%s\n' \
+            '# Include NVIDIA modules in initramfs for early KMS' \
+            'force_drivers+=" nvidia nvidia_modeset nvidia_drm nvidia_uvm "' \
+            'install_items+=" /etc/modprobe.d/nvidia.conf "' \
+            > /etc/dracut.conf.d/nvidia.conf
+          mkdir -p /etc/modprobe.d
+          printf '%s\n' \
+            '# NVIDIA DRM modesetting for Wayland' \
+            'options nvidia_drm modeset=1 fbdev=0' \
+            'options nvidia NVreg_DynamicPowerManagement=0x02' \
+            'options nvidia NVreg_PreserveVideoMemoryAllocations=1' \
+            > /etc/modprobe.d/nvidia.conf
 
       - name: Build Initramfs
         run: |
@@ -68,39 +96,51 @@ jobs:
           echo "Building initramfs for kernel: $KVER"
           dracut --kver "$KVER" --force --zstd --host-only \
             --add bash \
+            --force-drivers "nvidia nvidia_modeset nvidia_drm nvidia_uvm" \
             --ro-mnt /boot/initramfs.img
+
+      - name: Deploy System Configurations
+        run: |
+          cp calcium/.zshrc /root/.zshrc
+          mkdir -p /root/.config
+          cp -ra calcium/.config/zsh /root/.config/ 2>/dev/null || true
+          cp -ra calcium/.config/hypr /root/.config/ 2>/dev/null || true
+          cp -ra calcium/.config/hyprlock /root/.config/ 2>/dev/null || true
+          cp -ra calcium/.config/waybar /root/.config/ 2>/dev/null || true
+          cp -ra calcium/.config/mako /root/.config/ 2>/dev/null || true
+          cp -ra calcium/.config/foot /root/.config/ 2>/dev/null || true
+          cp -ra calcium/.config/gtk-3.0 /root/.config/ 2>/dev/null || true
+          cp -ra calcium/.config/gtk-4.0 /root/.config/ 2>/dev/null || true
+          cp calcium/etc/doas.conf /etc/doas.conf 2>/dev/null || true
+          cp -ra calcium/etc/elogind/* /etc/elogind/ 2>/dev/null || true
+          cp calcium/scripts/systemstart-hypr /root/ 2>/dev/null || true
+          cp calcium/scripts/amd-thermal-throttle.py /root/ 2>/dev/null || true
+          cp calcium/scripts/post-install-apps.sh /root/ 2>/dev/null || true
+          chsh -s /bin/zsh
 
       - name: Assemble Bootable ISO
         run: |
           KVER=$(ls -1 /lib/modules/ | sort -V | tail -1)
-          mkdir -p /iso-root/boot/grub
+          mkdir -p /iso-root/boot /iso-root/EFI/BOOT
 
           cp /boot/vmlinuz-* /iso-root/boot/
           cp /boot/initramfs* /iso-root/boot/
           cp calcium/boot-6-15-7/amd-uc.img /iso-root/boot/ 2>/dev/null || true
 
-          printf '%s\n' \
-            'set default="0"' \
-            'set timeout=30' \
-            'insmod all_video' \
-            'insmod gfxterm' \
-            'insmod ext2' \
-            'insmod btrfs' \
-            'insmod fat' \
-            'insmod part_gpt' \
-            '' \
-            'menuentry "Gentoo Linux (Custom Build)" {' \
-            "  linux /boot/vmlinuz-${KVER} root=UUID=1234 ro quiet rd.vconsole.keymap=uk" \
-            "  initrd /boot/amd-uc.img /boot/initramfs.img" \
-            '}' \
-            '' \
-            'menuentry "Gentoo Linux (Rescue Mode)" {' \
-            "  linux /boot/vmlinuz-${KVER} root=UUID=1234 ro single rd.shell rd.debug" \
-            "  initrd /boot/amd-uc.img /boot/initramfs.img" \
-            '}' \
-            > /iso-root/boot/grub/grub.cfg
+          cp /usr/share/limine/limine-bios-cd.bin /iso-root/
+          cp /usr/share/limine/limine-bios.sys /iso-root/
+          cp /usr/share/limine/BOOTX64.EFI /iso-root/EFI/BOOT/
+          cp /usr/share/limine/limine-uefi-cd.bin /iso-root/
 
-          grub-mkrescue -o /tmp/gentoo-custom-install.iso /iso-root
+          bash calcium/scripts/generate-limine-cfg.sh "$KVER" /iso-root/limine.cfg
+
+          xorriso -as mkisofs -b limine-bios-cd.bin \
+            -no-emul-boot -boot-load-size 4 -boot-info-table \
+            --efi-boot limine-uefi-cd.bin \
+            -efi-boot-part --efi-boot-image --protective-msdos-label \
+            /iso-root -o /tmp/gentoo-custom-install.iso
+
+          limine bios-install /tmp/gentoo-custom-install.iso
 
       - name: Verify ISO
         run: |
