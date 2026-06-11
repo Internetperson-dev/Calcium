@@ -61,7 +61,9 @@ jobs:
 
       - name: Install System Base
         run: |
-          # Install kernel binary without deps (binary package, no runtime libelf needed)
+          # Install sbsigntools (needed for kernel UKI verification); no libelf conflict
+          emerge -q app-crypt/sbsigntools
+          # Install kernel binary with --nodeps to avoid libelf/elfutils block
           emerge --nodeps -q sys-kernel/gentoo-kernel-bin
           # Install remaining base packages with autounmask handling
           PACKAGES="sys-kernel/linux-firmware sys-kernel/dracut sys-boot/limine dev-libs/libisoburn sys-auth/elogind app-shells/zsh dev-vcs/git"
