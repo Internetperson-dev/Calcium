@@ -28,8 +28,10 @@ jobs:
         run: |
           cp -ra calcium/etc-portage/* /etc/portage/ 2>/dev/null || true
           rm -rf /etc/portage/repos.conf /etc/portage/gnupg /etc/portage/make.profile
-          rm -f /etc/portage/package.use/python /etc/portage/package.use/no-multilib
+          rm -f /etc/portage/package.use/python
           echo 'sys-apps/systemd' > /etc/portage/package.mask/systemd
+          echo 'dev-libs/libelf' >> /etc/portage/package.mask/systemd
+          echo 'virtual/libelf' >> /etc/portage/package.mask/systemd
           ln -sfn ../../var/db/repos/gentoo/profiles/default/linux/amd64/23.0/desktop /etc/portage/make.profile
           mkdir -p /tmp/portage /tmp/distfiles
 
