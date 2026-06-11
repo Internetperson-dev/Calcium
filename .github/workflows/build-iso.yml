@@ -59,11 +59,20 @@ jobs:
           cat calcium/etc-portage/repos.conf/eselect-repo.conf >> /etc/portage/repos.conf
           emaint sync -a 2>/dev/null || true
 
+      - name: Pre-configure autounmask USE changes
+        run: |
+          printf '%s\n' \
+            '# abi_x86_32 exceptions for 64-bit-only build with desktop profile' \
+            '>=app-arch/brotli-1.2.0-r1 abi_x86_32' \
+            '>=dev-libs/glib-2.88.1 abi_x86_32' \
+            '>=media-libs/fontconfig-2.18.1 abi_x86_32' \
+            '>=sys-libs/zlib-ng-2.3.3 abi_x86_32 compat' \
+            '>=sys-apps/util-linux-2.42.1 abi_x86_32' \
+            '>=dev-libs/expat-2.8.1 abi_x86_32' \
+            > /etc/portage/package.use/zz-autounmask
+
       - name: Install System Base
         run: |
-          # Remove elfutils to resolve libelf/elfutils block (kernel needs libelf)
-          emerge -Cq dev-libs/elfutils 2>/dev/null || true
-          # Install all base packages with autounmask handling
           PACKAGES="sys-kernel/gentoo-kernel-bin sys-kernel/linux-firmware sys-kernel/dracut sys-boot/limine dev-libs/libisoburn sys-auth/elogind app-shells/zsh dev-vcs/git"
           for i in 1 2 3 4 5; do
             emerge --autounmask-write -q $PACKAGES && break
@@ -71,8 +80,6 @@ jobs:
             find /etc/portage -name '._cfg*' -exec sh -c 'cp "$1" "$(dirname "$1")/$(basename "$1" | sed "s/^\._cfg0000_//")"' _ {} \;
           done
           emerge -q $PACKAGES
-          # Rebuild packages that needed elfutils
-          emerge -1q sys-devel/binutils dev-util/debugedit dev-util/pahole 2>/dev/null || true
 
       - name: Deploy World File
         run: |
