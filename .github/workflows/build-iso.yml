@@ -67,7 +67,7 @@ jobs:
           KVER=$(ls -1 /lib/modules/ | sort -V | tail -1)
           echo "Building initramfs for kernel: $KVER"
           dracut --kver "$KVER" --force --zstd --host-only \
-            --add "bash crypt crypt-gpg" \
+            --add bash \
             --ro-mnt /boot/initramfs.img
 
       - name: Assemble Bootable ISO
