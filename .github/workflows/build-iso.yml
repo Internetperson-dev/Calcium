@@ -55,11 +55,7 @@ jobs:
       - name: Sync Portage Tree
         run: |
           emerge-webrsync
-          cp calcium/etc-portage/repos.conf/eselect-repo.conf /etc/portage/repos.conf/
-          eselect repository enable guru 2>/dev/null || true
-          eselect repository enable CachyOS-kernels 2>/dev/null || true
-          eselect repository enable hyproverlay 2>/dev/null || true
-          eselect repository enable pingwho-overlay 2>/dev/null || true
+          cat calcium/etc-portage/repos.conf/eselect-repo.conf >> /etc/portage/repos.conf
           emaint sync -a 2>/dev/null || true
 
       - name: Install System Base
