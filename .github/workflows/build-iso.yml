@@ -57,8 +57,9 @@ jobs:
       - name: Sync Portage Tree
         run: |
           emerge-webrsync
-          # Switch gentoo repo to git sync for fresher tree (has virtual/libelf-3 that uses elfutils)
-          sed -i '/^\[gentoo\]$/,/^\[/{s/sync-type = webrsync/sync-type = git/;/sync-uri/!s|^auto-sync = yes|auto-sync = yes\nsync-uri = https://anongit.gentoo.org/git/repo/sync/gentoo.git|}' /etc/portage/repos.conf
+          # Overwrite repos.conf with git-based gentoo repo + overlays
+          # (webrsync may not create repos.conf in newer portage versions)
+          cat calcium/etc-portage/repos.conf/gentoo.conf > /etc/portage/repos.conf
           cat calcium/etc-portage/repos.conf/eselect-repo.conf >> /etc/portage/repos.conf
           emaint sync -a 2>/dev/null || true
 
