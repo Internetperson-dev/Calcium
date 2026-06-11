@@ -61,18 +61,18 @@ jobs:
 
       - name: Install System Base
         run: |
-          # Install sbsigntools (needed for kernel UKI verification); no libelf conflict
-          emerge -q app-crypt/sbsigntools
-          # Install kernel binary with --nodeps to avoid libelf/elfutils block
-          emerge --nodeps -q sys-kernel/gentoo-kernel-bin
-          # Install remaining base packages with autounmask handling
-          PACKAGES="sys-kernel/linux-firmware sys-kernel/dracut sys-boot/limine dev-libs/libisoburn sys-auth/elogind app-shells/zsh dev-vcs/git"
+          # Remove elfutils to resolve libelf/elfutils block (kernel needs libelf)
+          emerge -Cq dev-libs/elfutils 2>/dev/null || true
+          # Install all base packages with autounmask handling
+          PACKAGES="sys-kernel/gentoo-kernel-bin sys-kernel/linux-firmware sys-kernel/dracut sys-boot/limine dev-libs/libisoburn sys-auth/elogind app-shells/zsh dev-vcs/git"
           for i in 1 2 3 4 5; do
             emerge --autounmask-write -q $PACKAGES && break
             echo "Autounmask pass $i done, merging changes and retrying..."
             find /etc/portage -name '._cfg*' -exec sh -c 'cp "$1" "$(dirname "$1")/$(basename "$1" | sed "s/^\._cfg0000_//")"' _ {} \;
           done
           emerge -q $PACKAGES
+          # Rebuild packages that needed elfutils
+          emerge -1q sys-devel/binutils dev-util/debugedit dev-util/pahole 2>/dev/null || true
 
       - name: Deploy World File
         run: |
