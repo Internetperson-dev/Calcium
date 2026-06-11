@@ -30,6 +30,7 @@ jobs:
           rm -rf /etc/portage/repos.conf /etc/portage/gnupg /etc/portage/make.profile
           rm -f /etc/portage/package.use/python
           echo 'sys-apps/systemd' > /etc/portage/package.mask/systemd
+          echo 'dev-libs/libelf' >> /etc/portage/package.mask/systemd
           ln -sfn ../../var/db/repos/gentoo/profiles/default/linux/amd64/23.0/desktop /etc/portage/make.profile
           mkdir -p /tmp/portage /tmp/distfiles
 
@@ -56,6 +57,8 @@ jobs:
       - name: Sync Portage Tree
         run: |
           emerge-webrsync
+          # Switch gentoo repo to git sync for fresher tree (has virtual/libelf-3 that uses elfutils)
+          sed -i '/^\[gentoo\]$/,/^\[/{s/sync-type = webrsync/sync-type = git/;/sync-uri/!s|^auto-sync = yes|auto-sync = yes\nsync-uri = https://anongit.gentoo.org/git/repo/sync/gentoo.git|}' /etc/portage/repos.conf
           cat calcium/etc-portage/repos.conf/eselect-repo.conf >> /etc/portage/repos.conf
           emaint sync -a 2>/dev/null || true
 
