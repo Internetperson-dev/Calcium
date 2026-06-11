@@ -55,8 +55,7 @@ jobs:
       - name: Sync Portage Tree
         run: |
           emerge-webrsync
-          mkdir -p /etc/portage/repos.conf
-          cp -ra calcium/etc-portage/repos.conf/* /etc/portage/repos.conf/
+          cp calcium/etc-portage/repos.conf/eselect-repo.conf /etc/portage/repos.conf/
           eselect repository enable guru 2>/dev/null || true
           eselect repository enable CachyOS-kernels 2>/dev/null || true
           eselect repository enable hyproverlay 2>/dev/null || true
@@ -65,21 +64,35 @@ jobs:
 
       - name: Install System Base
         run: |
-          export CONFIG_PROTECT_SKIP="/etc/portage"
           PACKAGES="sys-kernel/gentoo-kernel-bin sys-kernel/linux-firmware sys-kernel/dracut sys-boot/limine dev-libs/libisoburn sys-auth/elogind sys-auth/seatd app-shells/zsh dev-vcs/git"
-          emerge --autounmask-write -q $PACKAGES 2>&1 || true
+          for i in 1 2 3 4 5; do
+            emerge --autounmask-write -q $PACKAGES && break
+            echo "Autounmask pass $i done, merging changes and retrying..."
+            find /etc/portage -name '._cfg*' -exec sh -c 'cp "$1" "$(dirname "$1")/$(basename "$1" | sed "s/^\._cfg0000_//")"' _ {} \;
+          done
           emerge -q $PACKAGES
+
+      - name: Deploy World File
+        run: |
+          cp calcium/world /var/lib/portage/world
+          echo "Deployed world file with $(wc -l < /var/lib/portage/world) packages"
 
       - name: Install World Packages
         run: |
-          export CONFIG_PROTECT_SKIP="/etc/portage"
-          emerge --autounmask-write -uDN --with-bdeps=y @world 2>&1 || true
+          for i in 1 2 3 4 5; do
+            emerge --autounmask-write -uDN --with-bdeps=y @world && break
+            echo "Autounmask pass $i done, merging changes and retrying..."
+            find /etc/portage -name '._cfg*' -exec sh -c 'cp "$1" "$(dirname "$1")/$(basename "$1" | sed "s/^\._cfg0000_//")"' _ {} \;
+          done
           emerge -uDN --with-bdeps=y @world
 
       - name: Install NVIDIA Drivers
         run: |
-          export CONFIG_PROTECT_SKIP="/etc/portage"
-          emerge --autounmask-write -q x11-drivers/nvidia-drivers 2>&1 || true
+          for i in 1 2 3 4 5; do
+            emerge --autounmask-write -q x11-drivers/nvidia-drivers && break
+            echo "Autounmask pass $i done, merging changes and retrying..."
+            find /etc/portage -name '._cfg*' -exec sh -c 'cp "$1" "$(dirname "$1")/$(basename "$1" | sed "s/^\._cfg0000_//")"' _ {} \;
+          done
           emerge -q x11-drivers/nvidia-drivers
 
       - name: Create NVIDIA Dracut Config
