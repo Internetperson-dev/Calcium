@@ -1,0 +1,2 @@
+# Prevent 32-bit ABI on no-multilib system
+abi_x86_32

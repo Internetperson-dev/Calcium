@@ -79,14 +79,9 @@ jobs:
 
       - name: Pre-configure autounmask USE changes
         run: |
-          printf '%s\n' \
-            '# abi_x86_32 exceptions for 64-bit-only build with desktop profile' \
-            '>=app-arch/brotli-1.2.0-r1 abi_x86_32' \
-            '>=dev-libs/glib-2.88.1 abi_x86_32' \
-            '>=media-libs/fontconfig-2.18.1 abi_x86_32' \
-            '>=sys-apps/util-linux-2.42.1 abi_x86_32' \
-            '>=dev-libs/expat-2.8.1 abi_x86_32' \
-            > /etc/portage/package.use/zz-autounmask
+          # abi_x86_32 is globally masked via profile/package.use.mask/no-multilib,
+          # so portage will not attempt 32-bit builds even if the desktop profile
+          # forces abi_x86_32 on individual packages.
           # Separate file so autounmask doesn't overwrite it:
           echo 'dev-python/pillow -truetype' > /etc/portage/package.use/custom-no-truetype
 

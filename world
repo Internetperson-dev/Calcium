@@ -76,7 +76,6 @@ media-libs/libpulse
 media-libs/libwebp
 media-libs/openal
 media-sound/alsa-utils
-media-sound/pulseaudio
 media-sound/pulsemixer
 media-video/ffmpeg
 media-video/pipewire
