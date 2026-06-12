@@ -73,6 +73,8 @@ jobs:
             '>=media-libs/fontconfig-2.18.1 abi_x86_32' \
             '>=sys-apps/util-linux-2.42.1 abi_x86_32' \
             '>=dev-libs/expat-2.8.1 abi_x86_32' \
+            '# elfutils needs abi_x86_32 for virtual/libelf-3-r1 (used by glib[elf])' \
+            'dev-libs/elfutils abi_x86_32' \
             > /etc/portage/package.use/zz-autounmask
           # Separate file so autounmask doesn't overwrite it:
           echo 'dev-python/pillow -truetype' > /etc/portage/package.use/custom-no-truetype
