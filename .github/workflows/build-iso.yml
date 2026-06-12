@@ -48,11 +48,12 @@ jobs:
             'LC_MESSAGES=C.utf8' \
             'FEATURES="getbinpkg binpkg-request-signature"' \
             'ACCEPT_KEYWORDS="~amd64"' \
+            'ACCEPT_LICENSE="*"' \
             "MAKEOPTS=-j$(nproc)" \
             'INSTALLKERNEL_INITRD_GENERATOR="dracut"' \
             'PORTAGE_TMPDIR=/tmp/portage' \
             'DISTDIR=/tmp/distfiles' \
-            'EMERGE_DEFAULT_OPTS="--quiet-build --usepkg --verbose --autounmask-backtrack=y --backtrack=100 --binpkg-respect-use=n"' \
+            'EMERGE_DEFAULT_OPTS="--usepkg --verbose --autounmask-backtrack=y --backtrack=100 --binpkg-respect-use=n"' \
             >> /etc/portage/make.conf
 
       - name: Sync Portage Tree
