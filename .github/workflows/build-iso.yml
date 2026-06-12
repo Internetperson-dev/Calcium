@@ -73,6 +73,8 @@ jobs:
             '>=sys-libs/zlib-ng-2.3.3 abi_x86_32 compat' \
             '>=sys-apps/util-linux-2.42.1 abi_x86_32' \
             '>=dev-libs/expat-2.8.1 abi_x86_32' \
+            '# Break circular dep: glib -> docutils -> pillow -> harfbuzz -> glib' \
+            'dev-python/pillow -truetype' \
             > /etc/portage/package.use/zz-autounmask
 
       - name: Install System Base
@@ -81,7 +83,7 @@ jobs:
           for i in 1 2 3 4 5; do
             emerge --autounmask-write -q $PACKAGES && break
             echo "Autounmask pass $i done, merging changes and retrying..."
-            find /etc/portage -name '._cfg*' -exec sh -c 'cp "$1" "$(dirname "$1")/$(basename "$1" | sed "s/^\._cfg0000_//")"' _ {} \;
+            find /etc/portage -name '._cfg*' -exec sh -c 'cp "$1" "$(dirname "$1")/$(basename "$1" | sed "s/^\._cfg[0-9]*_//")"' _ {} \;
           done
           emerge -q $PACKAGES
 
@@ -95,7 +97,7 @@ jobs:
           for i in 1 2 3 4 5; do
             emerge --autounmask-write -uDN --with-bdeps=y @world && break
             echo "Autounmask pass $i done, merging changes and retrying..."
-            find /etc/portage -name '._cfg*' -exec sh -c 'cp "$1" "$(dirname "$1")/$(basename "$1" | sed "s/^\._cfg0000_//")"' _ {} \;
+            find /etc/portage -name '._cfg*' -exec sh -c 'cp "$1" "$(dirname "$1")/$(basename "$1" | sed "s/^\._cfg[0-9]*_//")"' _ {} \;
           done
           emerge -uDN --with-bdeps=y @world
 
@@ -104,7 +106,7 @@ jobs:
           for i in 1 2 3 4 5; do
             emerge --autounmask-write -q x11-drivers/nvidia-drivers && break
             echo "Autounmask pass $i done, merging changes and retrying..."
-            find /etc/portage -name '._cfg*' -exec sh -c 'cp "$1" "$(dirname "$1")/$(basename "$1" | sed "s/^\._cfg0000_//")"' _ {} \;
+            find /etc/portage -name '._cfg*' -exec sh -c 'cp "$1" "$(dirname "$1")/$(basename "$1" | sed "s/^\._cfg[0-9]*_//")"' _ {} \;
           done
           emerge -q x11-drivers/nvidia-drivers
 
