@@ -1,7 +1,0 @@
-# required by app-backup/timeshift-23.07.1::guru
-# required by timeshift (argument)
->=x11-libs/xapp-2.8.9 vala
-# required by net-fs/samba-4.24.0::gentoo
-# required by net-fs/cifs-utils-7.5::gentoo[acl]
-# required by net-fs/cifs-utils (argument)
-=net-libs/ngtcp2-1.21.0 gnutls

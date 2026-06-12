@@ -103,7 +103,7 @@ sys-block/parted
 sys-boot/efibootmgr
 sys-boot/vboot-utils
 sys-devel/gcc
-sys-devel/gcc:15
+dev-lang/flutter-bin
 sys-fs/btrfs-progs
 sys-fs/cryptsetup
 sys-fs/dosfstools
@@ -116,7 +116,6 @@ sys-fs/ncdu-bin
 sys-fs/ntfs3g
 sys-fs/simple-mtpfs
 sys-fs/squashfs-tools
-sys-kernel/cachyos-sources
 sys-kernel/dracut
 sys-kernel/gentoo-kernel-bin
 sys-kernel/linux-firmware
