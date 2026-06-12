@@ -73,8 +73,6 @@ jobs:
             '>=media-libs/fontconfig-2.18.1 abi_x86_32' \
             '>=sys-apps/util-linux-2.42.1 abi_x86_32' \
             '>=dev-libs/expat-2.8.1 abi_x86_32' \
-            '# elfutils needs abi_x86_32 for virtual/libelf-3-r1 (used by glib[elf])' \
-            'dev-libs/elfutils abi_x86_32' \
             > /etc/portage/package.use/zz-autounmask
           # Separate file so autounmask doesn't overwrite it:
           echo 'dev-python/pillow -truetype' > /etc/portage/package.use/custom-no-truetype
@@ -83,11 +81,11 @@ jobs:
         run: |
           PACKAGES="sys-kernel/gentoo-kernel-bin sys-kernel/linux-firmware sys-kernel/dracut sys-boot/limine dev-libs/libisoburn sys-auth/elogind app-shells/zsh dev-vcs/git"
           for i in 1 2 3 4 5; do
-            emerge --autounmask-write -q $PACKAGES && break
+            emerge --autounmask-write -q --usepkg-exclude 'virtual/libelf' $PACKAGES && break
             echo "Autounmask pass $i done, merging changes and retrying..."
             find /etc/portage -name '._cfg*' -exec sh -c 'cat "$1" > "$(dirname "$1")/$(basename "$1" | sed "s/^\._cfg[0-9]*_//")" && rm -f "$1"' _ {} \;
           done
-          emerge -q --autounmask=n $PACKAGES
+          emerge -q --autounmask=n --usepkg-exclude 'virtual/libelf' $PACKAGES
 
       - name: Deploy World File
         run: |
