@@ -85,9 +85,9 @@ jobs:
           for i in 1 2 3 4 5; do
             emerge --autounmask-write -q $PACKAGES && break
             echo "Autounmask pass $i done, merging changes and retrying..."
-            find /etc/portage -name '._cfg*' -exec sh -c 'cp "$1" "$(dirname "$1")/$(basename "$1" | sed "s/^\._cfg[0-9]*_//")"' _ {} \;
+            find /etc/portage -name '._cfg*' -exec sh -c 'cat "$1" > "$(dirname "$1")/$(basename "$1" | sed "s/^\._cfg[0-9]*_//")" && rm -f "$1"' _ {} \;
           done
-          emerge -q $PACKAGES
+          emerge -q --autounmask=n $PACKAGES
 
       - name: Deploy World File
         run: |
@@ -99,18 +99,18 @@ jobs:
           for i in 1 2 3 4 5; do
             emerge --autounmask-write -uDN --with-bdeps=y @world && break
             echo "Autounmask pass $i done, merging changes and retrying..."
-            find /etc/portage -name '._cfg*' -exec sh -c 'cp "$1" "$(dirname "$1")/$(basename "$1" | sed "s/^\._cfg[0-9]*_//")"' _ {} \;
+            find /etc/portage -name '._cfg*' -exec sh -c 'cat "$1" > "$(dirname "$1")/$(basename "$1" | sed "s/^\._cfg[0-9]*_//")" && rm -f "$1"' _ {} \;
           done
-          emerge -uDN --with-bdeps=y @world
+          emerge -uDN --with-bdeps=y --autounmask=n @world
 
       - name: Install NVIDIA Drivers
         run: |
           for i in 1 2 3 4 5; do
             emerge --autounmask-write -q x11-drivers/nvidia-drivers && break
             echo "Autounmask pass $i done, merging changes and retrying..."
-            find /etc/portage -name '._cfg*' -exec sh -c 'cp "$1" "$(dirname "$1")/$(basename "$1" | sed "s/^\._cfg[0-9]*_//")"' _ {} \;
+            find /etc/portage -name '._cfg*' -exec sh -c 'cat "$1" > "$(dirname "$1")/$(basename "$1" | sed "s/^\._cfg[0-9]*_//")" && rm -f "$1"' _ {} \;
           done
-          emerge -q x11-drivers/nvidia-drivers
+          emerge -q --autounmask=n x11-drivers/nvidia-drivers
 
       - name: Create NVIDIA Dracut Config
         run: |
