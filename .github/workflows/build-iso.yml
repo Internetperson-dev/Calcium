@@ -15,6 +15,8 @@ jobs:
       image: gentoo/stage3:latest
       options: --privileged
     timeout-minutes: 360
+    env:
+      PKGDIR: /var/cache/binpkgs
 
     steps:
       - uses: actions/checkout@v4
@@ -46,7 +48,8 @@ jobs:
             'FFLAGS="${COMMON_FLAGS}"' \
             'USE="wayland pipewire pulseaudio X flatpak elogind -systemd gnutls"' \
             'LC_MESSAGES=C.utf8' \
-            'FEATURES="getbinpkg binpkg-request-signature"' \
+            'FEATURES="getbinpkg buildpkg"' \
+            'PKGDIR=/var/cache/binpkgs' \
             'ACCEPT_KEYWORDS="~amd64"' \
             'ACCEPT_LICENSE="*"' \
             "MAKEOPTS=-j$(nproc)" \
@@ -64,6 +67,14 @@ jobs:
           cat calcium/etc-portage/repos.conf/gentoo.conf > /etc/portage/repos.conf
           cat calcium/etc-portage/repos.conf/eselect-repo.conf >> /etc/portage/repos.conf
           emaint sync -a 2>/dev/null || true
+
+      - name: Cache binary packages
+        uses: actions/cache@v4
+        with:
+          path: /var/cache/binpkgs
+          key: binpkgs-${{ hashFiles('world', 'etc-portage/package.use/*', 'etc-portage/package.mask/*') }}
+          restore-keys: |
+            binpkgs-
 
       - name: Pre-configure autounmask USE changes
         run: |
