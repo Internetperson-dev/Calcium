@@ -83,8 +83,8 @@ jobs:
             if ! command -v 7z &>/dev/null; then
               emerge -q app-arch/7zip
             fi
-            7z x /tmp/binpkgs-cache.7z -o/var/cache/binpkgs/ -y
-            ls /var/cache/binpkgs/ | head -5
+            7z x /tmp/binpkgs-cache.7z -o/ -y
+            ls /var/cache/binpkgs/ | head -10
           else
             echo "No cache found — starting fresh"
           fi
