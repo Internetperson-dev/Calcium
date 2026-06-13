@@ -33,7 +33,6 @@ dev-python/uv
 dev-qt/qtconcurrent
 dev-qt/qtwidgets
 dev-qt/qtx11extras
-dev-util/opencode-bin
 dev-util/ostree
 dev-util/vulkan-tools
 dev-vcs/git
@@ -47,7 +46,6 @@ gui-apps/mako
 gui-apps/sfwbar
 gui-apps/slurp
 gui-apps/swaybg
-gui-apps/swaylock-effects
 gui-apps/waybar
 gui-apps/wl-clipboard
 gui-apps/wlr-randr
@@ -59,7 +57,6 @@ gui-libs/xdg-desktop-portal-hyprland
 gui-libs/xdg-desktop-portal-wlr
 gui-wm/hyprland
 gui-wm/labwc
-gui-wm/mangowm
 gui-wm/tinywl
 llvm-core/llvm
 media-fonts/font-misc-misc
