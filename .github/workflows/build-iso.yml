@@ -34,6 +34,7 @@ jobs:
           echo 'sys-apps/systemd' > /etc/portage/package.mask/systemd
           echo 'dev-libs/libelf' >> /etc/portage/package.mask/systemd
           echo 'sys-libs/zlib-ng' >> /etc/portage/package.mask/systemd
+          echo '>=llvm-core/libclc-22' >> /etc/portage/package.mask/systemd
           ln -sfn ../../var/db/repos/gentoo/profiles/default/linux/amd64/23.0/desktop /etc/portage/make.profile
           mkdir -p /tmp/portage /tmp/distfiles
 
@@ -81,10 +82,10 @@ jobs:
           # abi_x86_32 is globally masked via profile/package.use.mask/no-multilib,
           # so portage will not attempt 32-bit builds even if the desktop profile
           # forces abi_x86_32 on individual packages.
-          # Break circular dep: ffmpeg → sdl2 → pipewire → ffmpeg
-          # Separate files so autounmask doesn't overwrite them:
+          # Break circular deps. Separate files so autounmask doesn't overwrite them:
           echo 'media-video/ffmpeg -sdl' > /etc/portage/package.use/zz-circular-dep-break
           echo 'dev-python/pillow -truetype' > /etc/portage/package.use/custom-no-truetype
+          echo 'media-libs/tiff -webp' > /etc/portage/package.use/zz-tiff-no-webp
 
       - name: Install System Base
         run: |
