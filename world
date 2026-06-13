@@ -96,6 +96,7 @@ sys-block/parted
 sys-boot/efibootmgr
 sys-boot/vboot-utils
 sys-devel/gcc
+dev-lang/flutter-bin
 sys-fs/btrfs-progs
 sys-fs/cryptsetup
 sys-fs/dosfstools
