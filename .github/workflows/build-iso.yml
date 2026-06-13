@@ -72,10 +72,19 @@ jobs:
       - name: Restore binary cache
         uses: actions/cache/restore@v4
         with:
-          path: /var/cache/binpkgs
-          key: binpkgs-world-${{ hashFiles('calcium/world', 'calcium/etc-portage/package.use/*', 'calcium/etc-portage/package.mask/*') }}
+          path: /tmp/binpkgs-cache.7z
+          key: binpkgs-full-${{ hashFiles('calcium/world', 'calcium/etc-portage/package.use/*', 'calcium/etc-portage/package.mask/*') }}
           restore-keys: |
             binpkgs-
+      - name: Decompress cached binaries
+        run: |
+          if [ -f /tmp/binpkgs-cache.7z ]; then
+            echo "Cache hit — decompressing..."
+            7z x /tmp/binpkgs-cache.7z -o/var/cache/binpkgs/ -y
+            ls /var/cache/binpkgs/ | head -5
+          else
+            echo "No cache found — starting fresh"
+          fi
 
       - name: Pre-configure autounmask USE changes
         run: |
@@ -89,7 +98,7 @@ jobs:
 
       - name: Install System Base
         run: |
-          PACKAGES="sys-kernel/gentoo-kernel-bin sys-kernel/linux-firmware sys-kernel/dracut sys-boot/limine dev-libs/libisoburn sys-auth/elogind app-shells/zsh dev-vcs/git"
+          PACKAGES="sys-kernel/gentoo-kernel-bin sys-kernel/linux-firmware sys-kernel/dracut sys-boot/limine dev-libs/libisoburn sys-auth/elogind app-shells/zsh dev-vcs/git app-arch/7zip"
           for i in 1 2 3 4 5; do
             emerge --autounmask-write -q --usepkg-exclude 'virtual/libelf' $PACKAGES && break
             echo "Autounmask pass $i done, merging changes and retrying..."
@@ -97,10 +106,11 @@ jobs:
           done
           emerge -q --autounmask=n --usepkg-exclude 'virtual/libelf' $PACKAGES
 
-      - name: Save binary cache (after base)
-        uses: actions/cache/save@v4
+      - name: Compress and save cache (after base)
+        run: 7z a -mx=1 /tmp/binpkgs-cache.7z /var/cache/binpkgs/ -y
+      - uses: actions/cache/save@v4
         with:
-          path: /var/cache/binpkgs
+          path: /tmp/binpkgs-cache.7z
           key: binpkgs-base-${{ hashFiles('calcium/world', 'calcium/etc-portage/package.use/*', 'calcium/etc-portage/package.mask/*') }}
 
       - name: Sync Overlays
@@ -116,6 +126,38 @@ jobs:
           cp calcium/world /var/lib/portage/world
           echo "Deployed world file with $(wc -l < /var/lib/portage/world) packages"
 
+      - name: Install LLVM (checkpoint)
+        run: |
+          for i in 1 2 3 4 5; do
+            emerge --autounmask-write -q llvm-core/llvm && break
+            echo "Autounmask pass $i done, merging changes and retrying..."
+            find /etc/portage -name '._cfg*' -exec sh -c 'cat "$1" > "$(dirname "$1")/$(basename "$1" | sed "s/^\._cfg[0-9]*_//")" && rm -f "$1"' _ {} \;
+          done
+          emerge -q --autounmask=n llvm-core/llvm
+
+      - name: Compress and save cache (after LLVM)
+        run: 7z a -mx=1 /tmp/binpkgs-cache.7z /var/cache/binpkgs/ -y
+      - uses: actions/cache/save@v4
+        with:
+          path: /tmp/binpkgs-cache.7z
+          key: binpkgs-llvm-${{ hashFiles('calcium/world', 'calcium/etc-portage/package.use/*', 'calcium/etc-portage/package.mask/*') }}
+
+      - name: Install Flutter (checkpoint)
+        run: |
+          for i in 1 2 3 4 5; do
+            emerge --autounmask-write -q dev-lang/flutter-bin && break
+            echo "Autounmask pass $i done, merging changes and retrying..."
+            find /etc/portage -name '._cfg*' -exec sh -c 'cat "$1" > "$(dirname "$1")/$(basename "$1" | sed "s/^\._cfg[0-9]*_//")" && rm -f "$1"' _ {} \;
+          done
+          emerge -q --autounmask=n dev-lang/flutter-bin
+
+      - name: Compress and save cache (after Flutter)
+        run: 7z a -mx=1 /tmp/binpkgs-cache.7z /var/cache/binpkgs/ -y
+      - uses: actions/cache/save@v4
+        with:
+          path: /tmp/binpkgs-cache.7z
+          key: binpkgs-flutter-${{ hashFiles('calcium/world', 'calcium/etc-portage/package.use/*', 'calcium/etc-portage/package.mask/*') }}
+
       - name: Install World Packages
         run: |
           for i in 1 2 3 4 5; do
@@ -125,10 +167,11 @@ jobs:
           done
           emerge -uDN --with-bdeps=y --autounmask=n --usepkg-exclude 'virtual/libelf' @world
 
-      - name: Save binary cache (after world)
-        uses: actions/cache/save@v4
+      - name: Compress and save cache (after world)
+        run: 7z a -mx=1 /tmp/binpkgs-cache.7z /var/cache/binpkgs/ -y
+      - uses: actions/cache/save@v4
         with:
-          path: /var/cache/binpkgs
+          path: /tmp/binpkgs-cache.7z
           key: binpkgs-world-${{ hashFiles('calcium/world', 'calcium/etc-portage/package.use/*', 'calcium/etc-portage/package.mask/*') }}
 
       - name: Install Hyprland
@@ -149,10 +192,11 @@ jobs:
           done
           emerge -q --autounmask=n x11-drivers/nvidia-drivers
 
-      - name: Save binary cache (after nvidia)
-        uses: actions/cache/save@v4
+      - name: Compress and save cache (after nvidia)
+        run: 7z a -mx=1 /tmp/binpkgs-cache.7z /var/cache/binpkgs/ -y
+      - uses: actions/cache/save@v4
         with:
-          path: /var/cache/binpkgs
+          path: /tmp/binpkgs-cache.7z
           key: binpkgs-nvidia-${{ hashFiles('calcium/world', 'calcium/etc-portage/package.use/*', 'calcium/etc-portage/package.mask/*') }}
 
       - name: Create NVIDIA Dracut Config
