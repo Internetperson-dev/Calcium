@@ -68,14 +68,13 @@ jobs:
           cat calcium/etc-portage/repos.conf/eselect-repo.conf >> /etc/portage/repos.conf
           # Don't sync overlays yet - git isn't installed. Done after Install System Base.
 
-      - name: Cache binary packages
-        uses: actions/cache@v4
+      - name: Restore binary cache
+        uses: actions/cache/restore@v4
         with:
           path: /var/cache/binpkgs
-          key: binpkgs-${{ hashFiles('calcium/world', 'calcium/etc-portage/package.use/*', 'calcium/etc-portage/package.mask/*') }}
+          key: binpkgs-world-${{ hashFiles('calcium/world', 'calcium/etc-portage/package.use/*', 'calcium/etc-portage/package.mask/*') }}
           restore-keys: |
             binpkgs-
-          save-always: true
 
       - name: Pre-configure autounmask USE changes
         run: |
@@ -96,6 +95,12 @@ jobs:
             find /etc/portage -name '._cfg*' -exec sh -c 'cat "$1" > "$(dirname "$1")/$(basename "$1" | sed "s/^\._cfg[0-9]*_//")" && rm -f "$1"' _ {} \;
           done
           emerge -q --autounmask=n --usepkg-exclude 'virtual/libelf' $PACKAGES
+
+      - name: Save binary cache (after base)
+        uses: actions/cache/save@v4
+        with:
+          path: /var/cache/binpkgs
+          key: binpkgs-base-${{ hashFiles('calcium/world', 'calcium/etc-portage/package.use/*', 'calcium/etc-portage/package.mask/*') }}
 
       - name: Sync Overlays
         run: |
@@ -119,6 +124,12 @@ jobs:
           done
           emerge -uDN --with-bdeps=y --autounmask=n --usepkg-exclude 'virtual/libelf' @world
 
+      - name: Save binary cache (after world)
+        uses: actions/cache/save@v4
+        with:
+          path: /var/cache/binpkgs
+          key: binpkgs-world-${{ hashFiles('calcium/world', 'calcium/etc-portage/package.use/*', 'calcium/etc-portage/package.mask/*') }}
+
       - name: Install Hyprland
         run: |
           for i in 1 2 3 4 5; do
@@ -136,6 +147,12 @@ jobs:
             find /etc/portage -name '._cfg*' -exec sh -c 'cat "$1" > "$(dirname "$1")/$(basename "$1" | sed "s/^\._cfg[0-9]*_//")" && rm -f "$1"' _ {} \;
           done
           emerge -q --autounmask=n x11-drivers/nvidia-drivers
+
+      - name: Save binary cache (after nvidia)
+        uses: actions/cache/save@v4
+        with:
+          path: /var/cache/binpkgs
+          key: binpkgs-nvidia-${{ hashFiles('calcium/world', 'calcium/etc-portage/package.use/*', 'calcium/etc-portage/package.mask/*') }}
 
       - name: Create NVIDIA Dracut Config
         run: |
