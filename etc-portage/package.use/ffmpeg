@@ -1,1 +1,1 @@
-media-video/ffmpeg X alsa bzip2 dav1d drm dvd fontconfig lcms libass opengl postproc pulseaudio svg truetype vorbis vulkan x264 xvid zlib nvenc cuda nvidia vulkan opus libwebp avif av1 david vulkan libaom dav1d rav1e svt-av1 lame
+media-video/ffmpeg X alsa bzip2 dav1d drm dvd fontconfig lcms libass opengl postproc pulseaudio svg truetype vorbis vulkan x264 xvid zlib nvenc cuda nvidia vulkan opus libwebp avif av1 david vulkan libaom dav1d rav1e svt-av1 lame -sdl

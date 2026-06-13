@@ -82,9 +82,9 @@ jobs:
           # abi_x86_32 is globally masked via profile/package.use.mask/no-multilib,
           # so portage will not attempt 32-bit builds even if the desktop profile
           # forces abi_x86_32 on individual packages.
-          # ffmpeg sdl removed from package.use/ffmpeg to break circular dep:
-          # ffmpeg → sdl2 → pipewire → ffmpeg
-          # Separate file so autounmask doesn't overwrite it:
+          # Break circular dep: ffmpeg → sdl2 → pipewire → ffmpeg
+          # Separate files so autounmask doesn't overwrite them:
+          echo 'media-video/ffmpeg -sdl' > /etc/portage/package.use/zz-circular-dep-break
           echo 'dev-python/pillow -truetype' > /etc/portage/package.use/custom-no-truetype
 
       - name: Install System Base
