@@ -30,9 +30,6 @@ dev-python/pycairo
 dev-python/pygobject
 dev-python/setproctitle
 dev-python/uv
-dev-qt/qtconcurrent
-dev-qt/qtwidgets
-dev-qt/qtx11extras
 dev-util/ostree
 dev-util/vulkan-tools
 dev-vcs/git

@@ -82,8 +82,8 @@ jobs:
           # abi_x86_32 is globally masked via profile/package.use.mask/no-multilib,
           # so portage will not attempt 32-bit builds even if the desktop profile
           # forces abi_x86_32 on individual packages.
-          # Break circular dep: ffmpeg → sdl2 → pipewire → ffmpeg
-          echo 'media-video/ffmpeg -sdl' > /etc/portage/package.use/ffmpeg
+          # ffmpeg sdl removed from package.use/ffmpeg to break circular dep:
+          # ffmpeg → sdl2 → pipewire → ffmpeg
           # Separate file so autounmask doesn't overwrite it:
           echo 'dev-python/pillow -truetype' > /etc/portage/package.use/custom-no-truetype
 
@@ -100,7 +100,10 @@ jobs:
       - name: Sync Overlays
         run: |
           # git is now installed, so emaint can clone overlay repos
-          emaint sync -a || true
+          for repo in guru CachyOS-kernels hyproverlay pingwho-overlay; do
+            echo "Syncing overlay: $repo"
+            emaint sync --repo "$repo" || true
+          done
 
       - name: Deploy World File
         run: |
