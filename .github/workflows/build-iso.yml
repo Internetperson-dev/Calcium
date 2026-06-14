@@ -44,6 +44,7 @@ jobs:
            echo '>=llvm-runtimes/compiler-rt-22' >> /etc/portage/package.mask/llvm
            echo '>=llvm-runtimes/compiler-rt-sanitizers-22' >> /etc/portage/package.mask/llvm
            echo '>=llvm-runtimes/clang-rtlib-config-22' >> /etc/portage/package.mask/llvm
+           echo '>=llvm-core/llvmgold-22' >> /etc/portage/package.mask/llvm
             ln -sfn ../../var/db/repos/gentoo/profiles/default/linux/amd64/23.0/desktop /etc/portage/make.profile
            mkdir -p /tmp/portage /tmp/distfiles
 
@@ -137,8 +138,24 @@ jobs:
             echo "$SLOT" > "$db/SLOT"
             echo "8" > "$db/EAPI"
             echo "~amd64" > "$db/KEYWORDS"
-            touch "$db/DEPEND" "$db/RDEPEND" "$db/USE"
+            touch "$db/DEPEND" "$db/RDEPEND"
+            # llvm needs binutils-plugin USE to satisfy llvmgold dependency
+            if [ "$pkg" = "llvm-core/llvm" ]; then
+              echo "binutils-plugin" > "$db/USE"
+            else
+              touch "$db/USE"
+            fi
           done
+          # llvmgold is version 22 with SLOT 0, not 22.1.7
+          VGOLD="22"
+          db="/var/db/pkg/llvm-core/llvmgold-${VGOLD}"
+          mkdir -p "$db"
+          echo "llvm-core" > "$db/CATEGORY"
+          echo "llvmgold-${VGOLD}" > "$db/PF"
+          echo "0" > "$db/SLOT"
+          echo "8" > "$db/EAPI"
+          echo "~amd64" > "$db/KEYWORDS"
+          touch "$db/DEPEND" "$db/RDEPEND" "$db/USE"
           echo "Installed LLVM + sub-packages ${VERSION} from GitHub binary"
 
       - name: Install System Base
