@@ -101,7 +101,7 @@ jobs:
 
       - name: Install System Base
         run: |
-          PACKAGES="sys-kernel/gentoo-kernel-bin sys-kernel/linux-firmware sys-kernel/dracut sys-boot/limine dev-libs/libisoburn sys-auth/elogind app-shells/zsh dev-vcs/git app-arch/7zip"
+          PACKAGES="net-misc/curl sys-kernel/gentoo-kernel-bin sys-kernel/linux-firmware sys-kernel/dracut sys-boot/limine dev-libs/libisoburn sys-auth/elogind app-shells/zsh dev-vcs/git app-arch/7zip"
           for i in 1 2 3 4 5; do
             emerge --autounmask-write -q --usepkg-exclude 'virtual/libelf' $PACKAGES && break
             echo "Autounmask pass $i done, merging changes and retrying..."
@@ -155,7 +155,7 @@ jobs:
           ldconfig
 
           SLOT="22"
-          for pkg in llvm-core/llvm llvm-core/clang; do
+          for pkg in llvm-core/llvm llvm-core/clang llvm-core/lld llvm-core/compiler-rt; do
             cat="${pkg%%/*}"
             name="${pkg#*/}"
             db="/var/db/pkg/${pkg}-${VERSION}"
