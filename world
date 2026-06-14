@@ -55,7 +55,6 @@ gui-libs/xdg-desktop-portal-wlr
 gui-wm/hyprland
 gui-wm/labwc
 gui-wm/tinywl
-llvm-core/llvm
 media-fonts/font-misc-misc
 media-fonts/fontawesome
 media-fonts/noto
