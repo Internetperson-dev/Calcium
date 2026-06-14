@@ -160,7 +160,7 @@ jobs:
 
       - name: Install System Base
         run: |
-          PACKAGES="net-misc/curl sys-kernel/gentoo-kernel-bin sys-kernel/linux-firmware sys-kernel/dracut sys-boot/limine dev-libs/libisoburn sys-auth/elogind app-shells/zsh dev-vcs/git app-arch/7zip"
+          PACKAGES="dev-libs/libxml2 net-misc/curl sys-kernel/gentoo-kernel-bin sys-kernel/linux-firmware sys-kernel/dracut sys-boot/limine dev-libs/libisoburn sys-auth/elogind app-shells/zsh dev-vcs/git app-arch/7zip"
           for i in 1 2 3 4 5; do
             emerge --autounmask-write -q --usepkg-exclude 'virtual/libelf' $PACKAGES && break
             echo "Autounmask pass $i done, merging changes and retrying..."
