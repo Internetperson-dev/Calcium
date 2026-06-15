@@ -164,7 +164,7 @@ jobs:
           touch "$db/DEPEND" "$db/RDEPEND" "$db/USE"
 
           # Fake LLVM 21 entries — prevents pulling in binhost LLVM 21
-          VERSION_LLVM21="21.99"
+          VERSION_LLVM21="20.9"
           SLOT_LLVM21="21"
           for pkg in \
             llvm-core/llvm \
