@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   build-iso:
-    runs-on: github-latest
+    runs-on: ubuntu-latest
     container:
       image: gentoo/stage3:latest
       options: --privileged
@@ -39,53 +39,43 @@ jobs:
           echo 'dev-libs/libelf' >> /etc/portage/package.mask/systemd
           echo 'sys-libs/zlib-ng' >> /etc/portage/package.mask/systemd
 
-          # LLVM mask (we use binary-first install only)
-          cat <<EOF > /etc/portage/package.mask/llvm
-          >=llvm-core/llvm-22
-          >=llvm-core/clang-22
-          >=llvm-core/lld-22
-          >=llvm-core/libclc-22
-          >=llvm-runtimes/compiler-rt-22
-          >=llvm-runtimes/compiler-rt-sanitizers-22
-          EOF
+          # LLVM mask — block emerge from building any LLVM 21+ (provided by GitHub binary)
+          echo '# LLVM 21+ provided by GitHub binary — block emerge from building' > /etc/portage/package.mask/llvm
+          echo '>=llvm-core/llvm-21' >> /etc/portage/package.mask/llvm
+          echo '>=llvm-core/llvm-common-21' >> /etc/portage/package.mask/llvm
+          echo '>=llvm-core/clang-21' >> /etc/portage/package.mask/llvm
+          echo '>=llvm-core/clang-common-21' >> /etc/portage/package.mask/llvm
+          echo '>=llvm-core/lld-21' >> /etc/portage/package.mask/llvm
+          echo '>=llvm-core/libclc-21' >> /etc/portage/package.mask/llvm
+          echo '>=llvm-runtimes/compiler-rt-21' >> /etc/portage/package.mask/llvm
+          echo '>=llvm-runtimes/compiler-rt-sanitizers-21' >> /etc/portage/package.mask/llvm
+          echo '>=llvm-runtimes/clang-rtlib-config-21' >> /etc/portage/package.mask/llvm
+          echo '>=llvm-core/llvmgold-21' >> /etc/portage/package.mask/llvm
 
           ln -sfn ../../var/db/repos/gentoo/profiles/default/linux/amd64/23.0/desktop /etc/portage/make.profile
 
           mkdir -p /tmp/portage /tmp/distfiles
 
-      # ---------------- STRICT BINPKG MODE (IMPROVEMENT #2) ----------------
-      - name: Set make.conf (STRICT BINARY MODE)
+      # ---------------- MAKE.CONF ----------------
+      - name: Set make.conf
         run: |
-          cat <<EOF > /etc/portage/make.conf
-
-COMMON_FLAGS="-O2 -pipe"
-CFLAGS="\${COMMON_FLAGS}"
-CXXFLAGS="\${COMMON_FLAGS}"
-
-USE="wayland pipewire pulseaudio X flatpak elogind -systemd gnutls"
-
-LC_MESSAGES=C.utf8
-
-# HARD binary-first mode
-FEATURES="getbinpkg buildpkg binpkg-multi-instance binpkg-request-signature"
-
-PKGDIR="/var/cache/binpkgs"
-PORTAGE_BINHOST="file:///var/cache/binpkgs"
-
-ACCEPT_KEYWORDS="~amd64"
-ACCEPT_LICENSE="*"
-
-MAKEOPTS="-j\$(nproc) -l\$(nproc)"
-
-INSTALLKERNEL_INITRD_GENERATOR="dracut"
-
-PORTAGE_TMPDIR="/tmp/portage"
-DISTDIR="/tmp/distfiles"
-
-# STRICT binary enforcement (important)
-EMERGE_DEFAULT_OPTS="--getbinpkgonly --usepkg --binpkg-respect-y-args=y --jobs \$(nproc) --backtrack=100 --autounmask-backtrack=y"
-
-EOF
+          > /etc/portage/make.conf
+          printf '%s\n' \
+            'COMMON_FLAGS="-O2 -pipe"' \
+            'CFLAGS="${COMMON_FLAGS}"' \
+            'CXXFLAGS="${COMMON_FLAGS}"' \
+            'USE="wayland pipewire pulseaudio X flatpak elogind -systemd gnutls"' \
+            'LC_MESSAGES=C.utf8' \
+            'FEATURES="getbinpkg buildpkg binpkg-multi-instance"' \
+            'PKGDIR=/var/cache/binpkgs' \
+            'ACCEPT_KEYWORDS="~amd64"' \
+            'ACCEPT_LICENSE="*"' \
+            "MAKEOPTS=-j$(nproc) -l$(nproc)" \
+            'INSTALLKERNEL_INITRD_GENERATOR="dracut"' \
+            'PORTAGE_TMPDIR=/tmp/portage' \
+            'DISTDIR=/tmp/distfiles' \
+            'EMERGE_DEFAULT_OPTS="--usepkg --verbose --autounmask-backtrack=y --backtrack=100"' \
+            >> /etc/portage/make.conf
 
       # ---------------- SYNC ----------------
       - name: Sync Portage Tree
@@ -94,7 +84,7 @@ EOF
           cat calcium/etc-portage/repos.conf/gentoo.conf > /etc/portage/repos.conf
           cat calcium/etc-portage/repos.conf/eselect-repo.conf >> /etc/portage/repos.conf
 
-      # ---------------- CACHE RESTORE (IMPROVEMENT #3) ----------------
+      # ---------------- CACHE RESTORE ----------------
       - name: Restore best binpkg snapshot
         uses: actions/cache/restore@v4
         with:
@@ -115,20 +105,117 @@ EOF
             echo "No cache found"
           fi
 
+      # ---------------- PRE-CONFIGURE AUTOMASK ----------------
+      - name: Pre-configure autounmask USE changes
+        run: |
+          echo 'media-video/ffmpeg -sdl' > /etc/portage/package.use/zz-circular-dep-break
+          echo 'dev-python/pillow -truetype' > /etc/portage/package.use/custom-no-truetype
+          echo 'media-libs/tiff -webp' > /etc/portage/package.use/zz-tiff-no-webp
+
+      # ---------------- LLVM BINARY ----------------
+      - name: Install LLVM + Clang from GitHub binary
+        run: |
+          VERSION="22.1.7"
+          URL="https://github.com/llvm/llvm-project/releases/download/llvmorg-${VERSION}/LLVM-${VERSION}-Linux-X64.tar.xz"
+          echo "Downloading LLVM ${VERSION} prebuilt binary from GitHub..."
+          wget -O /tmp/llvm.tar.xz "$URL"
+          tar xf /tmp/llvm.tar.xz -C /usr --strip-components=1
+          ldconfig
+
+          # Fake portage db entries for LLVM 22
+          SLOT="22"
+          for pkg in \
+            llvm-core/llvm \
+            llvm-core/llvm-common \
+            llvm-core/clang \
+            llvm-core/clang-common \
+            llvm-core/lld \
+            llvm-runtimes/compiler-rt \
+            llvm-runtimes/compiler-rt-sanitizers \
+            llvm-runtimes/clang-rtlib-config \
+            llvm-core/libclc \
+          ; do
+            cat="${pkg%%/*}"
+            name="${pkg#*/}"
+            db="/var/db/pkg/${pkg}-${VERSION}"
+            mkdir -p "$db"
+            echo "$cat" > "$db/CATEGORY"
+            echo "${name}-${VERSION}" > "$db/PF"
+            echo "$SLOT" > "$db/SLOT"
+            echo "8" > "$db/EAPI"
+            echo "~amd64" > "$db/KEYWORDS"
+            touch "$db/DEPEND" "$db/RDEPEND"
+            if [ "$pkg" = "llvm-core/llvm" ]; then
+              echo "binutils-plugin" > "$db/USE"
+            else
+              touch "$db/USE"
+            fi
+          done
+
+          # llvmgold — version 22, SLOT 0
+          VGOLD="22"
+          db="/var/db/pkg/llvm-core/llvmgold-${VGOLD}"
+          mkdir -p "$db"
+          echo "llvm-core" > "$db/CATEGORY"
+          echo "llvmgold-${VGOLD}" > "$db/PF"
+          echo "0" > "$db/SLOT"
+          echo "8" > "$db/EAPI"
+          echo "~amd64" > "$db/KEYWORDS"
+          touch "$db/DEPEND" "$db/RDEPEND" "$db/USE"
+
+          # Fake LLVM 21 entries — prevents pulling in binhost LLVM 21
+          VERSION_LLVM21="21.99"
+          SLOT_LLVM21="21"
+          for pkg in \
+            llvm-core/llvm \
+            llvm-core/llvm-common \
+            llvm-core/clang \
+            llvm-core/clang-common \
+            llvm-core/lld \
+            llvm-runtimes/compiler-rt \
+            llvm-runtimes/compiler-rt-sanitizers \
+            llvm-runtimes/clang-rtlib-config \
+            llvm-core/libclc \
+          ; do
+            cat="${pkg%%/*}"
+            name="${pkg#*/}"
+            db="/var/db/pkg/${pkg}-${VERSION_LLVM21}"
+            mkdir -p "$db"
+            echo "$cat" > "$db/CATEGORY"
+            echo "${name}-${VERSION_LLVM21}" > "$db/PF"
+            echo "$SLOT_LLVM21" > "$db/SLOT"
+            echo "8" > "$db/EAPI"
+            echo "~amd64" > "$db/KEYWORDS"
+            touch "$db/DEPEND" "$db/RDEPEND"
+            if [ "$pkg" = "llvm-core/llvm" ]; then
+              echo "binutils-plugin" > "$db/USE"
+            else
+              touch "$db/USE"
+            fi
+          done
+
+          echo "Installed LLVM ${VERSION} from GitHub binary with fake db entries"
+
+      # ---------------- LIBXML2 (for ld.lld) ----------------
+      - name: Install libxml2 (so ld.lld finds it)
+        run: |
+          emerge -q dev-libs/libxml2
+          ldconfig
+
       # ---------------- SYSTEM BASE ----------------
       - name: Install System Base
         run: |
-          PACKAGES="dev-libs/libxml2 net-misc/curl sys-kernel/gentoo-kernel-bin sys-kernel/linux-firmware sys-kernel/dracut sys-boot/limine dev-libs/libisoburn sys-auth/elogind app-shells/zsh dev-vcs/git app-arch/7zip"
+          PACKAGES="net-misc/curl sys-kernel/gentoo-kernel-bin sys-kernel/linux-firmware sys-kernel/dracut sys-boot/limine dev-libs/libisoburn sys-auth/elogind app-shells/zsh dev-vcs/git app-arch/7zip"
 
           for i in 1 2 3 4 5; do
-            emerge --autounmask-write --getbinpkg --usepkg $PACKAGES && break
+            emerge --autounmask-write --usepkg --usepkg-exclude 'virtual/libelf' $PACKAGES && break
             find /etc/portage -name '._cfg*' -exec sh -c '
               cat "$1" > "$(dirname "$1")/$(basename "$1" | sed "s/^\._cfg[0-9]*_//")"
               rm -f "$1"
             ' _ {} \;
           done
 
-          emerge --autounmask=n --getbinpkg --usepkg $PACKAGES
+          emerge --autounmask=n --usepkg --usepkg-exclude 'virtual/libelf' $PACKAGES
 
       # ---------------- SNAPSHOT #1 ----------------
       - name: Snapshot binpkgs (system base)
@@ -140,35 +227,48 @@ EOF
           path: /tmp/binpkgs-system.tar.zst
           key: binpkgs-system-${{ hashFiles('calcium/world', 'calcium/etc-portage/package.use/*', 'calcium/etc-portage/package.mask/*') }}
 
-      # ---------------- LLVM (CLEAN OPTION A) ----------------
-      - name: Install LLVM (binary-first Portage)
+      # ---------------- SYNC OVERLAYS ----------------
+      - name: Sync Overlays
         run: |
-          LLVM_PKGS="
-            llvm-core/llvm
-            llvm-core/clang
-            llvm-core/lld
-            llvm-core/llvm-common
-            llvm-core/clang-common
-            llvm-runtimes/compiler-rt
-            llvm-runtimes/compiler-rt-sanitizers
-            llvm-core/libclc
-          "
+          for repo in guru CachyOS-kernels hyproverlay pingwho-overlay arrans-overlay; do
+            echo "Syncing overlay: $repo"
+            emaint sync --repo "$repo" || true
+          done
 
-          emerge --getbinpkgonly --usepkgonly $LLVM_PKGS || \
-          emerge --getbinpkg --usepkg $LLVM_PKGS
+      # ---------------- WORLD FILE ----------------
+      - name: Deploy World File
+        run: |
+          cp calcium/world /var/lib/portage/world
+
+      # ---------------- FLUTTER ----------------
+      - name: Install Flutter
+        run: |
+          for i in 1 2 3 4 5; do
+            emerge --autounmask-write -q dev-lang/flutter-bin && break
+            find /etc/portage -name '._cfg*' -exec sh -c '
+              cat "$1" > "$(dirname "$1")/$(basename "$1" | sed "s/^\._cfg[0-9]*_//")"
+              rm -f "$1"
+            ' _ {} \;
+          done
+          emerge -q --autounmask=n dev-lang/flutter-bin
+
+      # ---------------- BINARY GCC ----------------
+      - name: Install binary gcc from binhost
+        run: |
+          emerge --usepkgonly -1q sys-devel/gcc 2>/dev/null && echo "gcc installed from binary" || echo "No binary gcc, will use stage3 version"
 
       # ---------------- WORLD ----------------
       - name: Install World Packages
         run: |
           for i in 1 2 3 4 5; do
-            emerge --autounmask-write --with-bdeps=y --getbinpkg --usepkg @world && break
+            emerge --autounmask-write --with-bdeps=y --usepkg --usepkg-exclude 'virtual/libelf' @world && break
             find /etc/portage -name '._cfg*' -exec sh -c '
               cat "$1" > "$(dirname "$1")/$(basename "$1" | sed "s/^\._cfg[0-9]*_//")"
               rm -f "$1"
             ' _ {} \;
           done
 
-          emerge --with-bdeps=y --autounmask=n --getbinpkg --usepkg @world
+          emerge --with-bdeps=y --autounmask=n --usepkg --usepkg-exclude 'virtual/libelf' @world
 
       # ---------------- SNAPSHOT #2 ----------------
       - name: Snapshot binpkgs (world)
@@ -180,14 +280,29 @@ EOF
           path: /tmp/binpkgs-world.tar.zst
           key: binpkgs-world-${{ hashFiles('calcium/world', 'calcium/etc-portage/package.use/*', 'calcium/etc-portage/package.mask/*') }}
 
-      # ---------------- HYPRLAND + NVIDIA ----------------
+      # ---------------- HYPRLAND ----------------
       - name: Install Hyprland
         run: |
-          emerge --getbinpkg -q gui-wm/hyprland || emerge gui-wm/hyprland
+          for i in 1 2 3 4 5; do
+            emerge --autounmask-write -q gui-wm/hyprland && break
+            find /etc/portage -name '._cfg*' -exec sh -c '
+              cat "$1" > "$(dirname "$1")/$(basename "$1" | sed "s/^\._cfg[0-9]*_//")"
+              rm -f "$1"
+            ' _ {} \;
+          done
+          emerge -q --autounmask=n gui-wm/hyprland
 
+      # ---------------- NVIDIA ----------------
       - name: Install NVIDIA Drivers
         run: |
-          emerge --getbinpkg -q x11-drivers/nvidia-drivers || emerge x11-drivers/nvidia-drivers
+          for i in 1 2 3 4 5; do
+            emerge --autounmask-write -q x11-drivers/nvidia-drivers && break
+            find /etc/portage -name '._cfg*' -exec sh -c '
+              cat "$1" > "$(dirname "$1")/$(basename "$1" | sed "s/^\._cfg[0-9]*_//")"
+              rm -f "$1"
+            ' _ {} \;
+          done
+          emerge -q --autounmask=n x11-drivers/nvidia-drivers
 
       # ---------------- FINAL SNAPSHOT ----------------
       - name: Snapshot binpkgs (final)
@@ -203,19 +318,17 @@ EOF
       - name: Configure NVIDIA initramfs
         run: |
           mkdir -p /etc/dracut.conf.d
-
-          cat <<EOF > /etc/dracut.conf.d/nvidia.conf
-force_drivers+=" nvidia nvidia_modeset nvidia_drm nvidia_uvm "
-install_items+=" /etc/modprobe.d/nvidia.conf "
-EOF
+          printf '%s\n' \
+            'force_drivers+=" nvidia nvidia_modeset nvidia_drm nvidia_uvm "' \
+            'install_items+=" /etc/modprobe.d/nvidia.conf "' \
+            > /etc/dracut.conf.d/nvidia.conf
 
           mkdir -p /etc/modprobe.d
-
-          cat <<EOF > /etc/modprobe.d/nvidia.conf
-options nvidia_drm modeset=1 fbdev=0
-options nvidia NVreg_DynamicPowerManagement=0x02
-options nvidia NVreg_PreserveVideoMemoryAllocations=1
-EOF
+          printf '%s\n' \
+            'options nvidia_drm modeset=1 fbdev=0' \
+            'options nvidia NVreg_DynamicPowerManagement=0x02' \
+            'options nvidia NVreg_PreserveVideoMemoryAllocations=1' \
+            > /etc/modprobe.d/nvidia.conf
 
       - name: Build Initramfs
         run: |
@@ -237,7 +350,10 @@ EOF
           cp /boot/initramfs* /iso-root/boot/
           cp calcium/boot-6-15-7/amd-uc.img /iso-root/boot/ 2>/dev/null || true
 
-          cp /usr/share/limine/* /iso-root/
+          cp /usr/share/limine/limine-bios-cd.bin /iso-root/
+          cp /usr/share/limine/limine-bios.sys /iso-root/
+          cp /usr/share/limine/BOOTX64.EFI /iso-root/EFI/BOOT/
+          cp /usr/share/limine/limine-uefi-cd.bin /iso-root/
 
           bash calcium/scripts/generate-limine-cfg.sh "$KVER" /iso-root/limine.cfg
 
