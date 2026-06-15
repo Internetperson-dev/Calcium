@@ -70,7 +70,7 @@ jobs:
             'PKGDIR=/var/cache/binpkgs' \
             'ACCEPT_KEYWORDS="~amd64"' \
             'ACCEPT_LICENSE="*"' \
-            "MAKEOPTS=-j$(nproc) -l$(nproc)" \
+            "MAKEOPTS=\"-j$(nproc) -l$(nproc)\"" \
             'INSTALLKERNEL_INITRD_GENERATOR="dracut"' \
             'PORTAGE_TMPDIR=/tmp/portage' \
             'DISTDIR=/tmp/distfiles' \
