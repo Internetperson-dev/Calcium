@@ -88,9 +88,23 @@ jobs:
             echo "Restoring binary package cache..."
             emerge -q app-arch/zstd || true
             tar -I zstd -xf /tmp/binpkgs-cache.tar.zst -C /
-          else
-            echo "No cache found"
           fi
+
+      - name: Download stage4 binpkgs from Release
+        run: |
+          TAG="calcium-binpkgs"
+          ASSET="calcium-binpkgs.tar.zst"
+          if gh release view "$TAG" --json assets 2>/dev/null | grep -q "$ASSET"; then
+            echo "Downloading stage4 binpkgs from Release '${TAG}'..."
+            gh release download "$TAG" --pattern "$ASSET" -D /tmp/
+            emerge -q app-arch/zstd || true
+            tar -I zstd -xf "/tmp/$ASSET" -C /var/cache/binpkgs/
+            echo "Stage4 binpkgs extracted"
+          else
+            echo "No stage4 Release '${TAG}' found — will use binhost / build"
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
 
       # ---------------- PRE-CONFIGURE AUTOMASK ----------------
       - name: Pre-configure autounmask USE changes
