@@ -156,7 +156,12 @@ jobs:
       - name: Install libxml2 (so ld.lld finds it)
         run: |
           emerge -q dev-libs/libxml2
+          mkdir -p /etc/ld.so.conf.d
+          LIBXML2_DIR=$(find /usr -name "libxml2.so*" -type f 2>/dev/null | head -1 | xargs dirname)
+          echo "$LIBXML2_DIR" > /etc/ld.so.conf.d/libxml2.conf
           ldconfig
+          ldconfig -p | grep libxml2 || echo "WARNING: libxml2 not found in ldconfig cache"
+          ldd /usr/bin/ld.lld 2>&1 | grep libxml2 || echo "ld.lld does not link libxml2 directly (may use dlopen)"
 
       # ---------------- SYSTEM BASE ----------------
       - name: Install System Base
