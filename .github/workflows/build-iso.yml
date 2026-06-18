@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build-iso:
@@ -183,13 +183,15 @@ jobs:
           PACKAGES="net-misc/curl sys-kernel/gentoo-kernel-bin sys-kernel/linux-firmware sys-kernel/dracut sys-boot/limine dev-libs/libisoburn sys-auth/elogind app-shells/zsh dev-vcs/git app-arch/7zip"
 
           for i in 1 2 3 4 5; do
-            emerge --autounmask-write --usepkg --usepkg-exclude 'virtual/libelf' $PACKAGES && break
+            (emerge --autounmask-write --binpkg-respect-use=n --usepkgonly --usepkg-exclude 'virtual/libelf' $PACKAGES 2>/dev/null || \
+             emerge --autounmask-write --usepkg --usepkg-exclude 'virtual/libelf' $PACKAGES) && break
             find /etc/portage -name '._cfg*' -exec sh -c '
               cat "$1" > "$(dirname "$1")/$(basename "$1" | sed "s/^\._cfg[0-9]*_//")"
               rm -f "$1"
             ' _ {} \;
           done
 
+          emerge --autounmask=n --binpkg-respect-use=n --usepkgonly --usepkg-exclude 'virtual/libelf' $PACKAGES 2>/dev/null || \
           emerge --autounmask=n --usepkg --usepkg-exclude 'virtual/libelf' $PACKAGES
 
       # ---------------- SNAPSHOT #1 ----------------
@@ -219,12 +221,14 @@ jobs:
       - name: Install Flutter
         run: |
           for i in 1 2 3 4 5; do
-            emerge --autounmask-write -q dev-lang/flutter-bin && break
+            (emerge --autounmask-write --binpkg-respect-use=n --usepkgonly -q dev-lang/flutter-bin 2>/dev/null || \
+             emerge --autounmask-write -q dev-lang/flutter-bin) && break
             find /etc/portage -name '._cfg*' -exec sh -c '
               cat "$1" > "$(dirname "$1")/$(basename "$1" | sed "s/^\._cfg[0-9]*_//")"
               rm -f "$1"
             ' _ {} \;
           done
+          emerge -q --autounmask=n --binpkg-respect-use=n --usepkgonly dev-lang/flutter-bin 2>/dev/null || \
           emerge -q --autounmask=n dev-lang/flutter-bin
 
       # ---------------- BINARY GCC ----------------
@@ -236,13 +240,15 @@ jobs:
       - name: Install World Packages
         run: |
           for i in 1 2 3 4 5; do
-            emerge --autounmask-write --with-bdeps=y --usepkg --usepkg-exclude 'virtual/libelf' @world && break
+            (emerge --autounmask-write --with-bdeps=y --binpkg-respect-use=n --usepkgonly --usepkg-exclude 'virtual/libelf' @world 2>/dev/null || \
+             emerge --autounmask-write --with-bdeps=y --usepkg --usepkg-exclude 'virtual/libelf' @world) && break
             find /etc/portage -name '._cfg*' -exec sh -c '
               cat "$1" > "$(dirname "$1")/$(basename "$1" | sed "s/^\._cfg[0-9]*_//")"
               rm -f "$1"
             ' _ {} \;
           done
 
+          emerge --with-bdeps=y --autounmask=n --binpkg-respect-use=n --usepkgonly --usepkg-exclude 'virtual/libelf' @world 2>/dev/null || \
           emerge --with-bdeps=y --autounmask=n --usepkg --usepkg-exclude 'virtual/libelf' @world
 
       # ---------------- SNAPSHOT #2 ----------------
@@ -259,24 +265,28 @@ jobs:
       - name: Install Hyprland
         run: |
           for i in 1 2 3 4 5; do
-            emerge --autounmask-write -q gui-wm/hyprland && break
+            (emerge --autounmask-write --binpkg-respect-use=n --usepkgonly -q gui-wm/hyprland 2>/dev/null || \
+             emerge --autounmask-write -q gui-wm/hyprland) && break
             find /etc/portage -name '._cfg*' -exec sh -c '
               cat "$1" > "$(dirname "$1")/$(basename "$1" | sed "s/^\._cfg[0-9]*_//")"
               rm -f "$1"
             ' _ {} \;
           done
+          emerge -q --autounmask=n --binpkg-respect-use=n --usepkgonly gui-wm/hyprland 2>/dev/null || \
           emerge -q --autounmask=n gui-wm/hyprland
 
       # ---------------- NVIDIA ----------------
       - name: Install NVIDIA Drivers
         run: |
           for i in 1 2 3 4 5; do
-            emerge --autounmask-write -q x11-drivers/nvidia-drivers && break
+            (emerge --autounmask-write --binpkg-respect-use=n --usepkgonly -q x11-drivers/nvidia-drivers 2>/dev/null || \
+             emerge --autounmask-write -q x11-drivers/nvidia-drivers) && break
             find /etc/portage -name '._cfg*' -exec sh -c '
               cat "$1" > "$(dirname "$1")/$(basename "$1" | sed "s/^\._cfg[0-9]*_//")"
               rm -f "$1"
             ' _ {} \;
           done
+          emerge -q --autounmask=n --binpkg-respect-use=n --usepkgonly x11-drivers/nvidia-drivers 2>/dev/null || \
           emerge -q --autounmask=n x11-drivers/nvidia-drivers
 
       # ---------------- FINAL SNAPSHOT ----------------
@@ -355,3 +365,21 @@ jobs:
           path: /tmp/gentoo-custom-install.iso
           retention-days: 30
           compression-level: 0
+
+      # ---------------- STAGE4 RELEASE ----------------
+      - name: Upload binpkgs to Release
+        if: github.ref == 'refs/heads/main' && success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="calcium-binpkgs"
+          ASSET="calcium-binpkgs.tar.zst"
+          echo "Creating stage4 tarball from ${PKGDIR}..."
+          tar -I 'zstd -1' -cf "/tmp/${ASSET}" -C "${PKGDIR}" .
+          ls -lh "/tmp/${ASSET}"
+          gh release view "$TAG" &>/dev/null || gh release create "$TAG" --title "Binary package cache" --notes "Auto-generated after successful CI build" || true
+          echo "Uploading ${ASSET} to release ${TAG}..."
+          if ! gh release upload "$TAG" "/tmp/${ASSET}" --clobber 2>/dev/null; then
+            gh release delete-asset "$TAG" "$ASSET" 2>/dev/null || true
+            gh release upload "$TAG" "/tmp/${ASSET}" 2>/dev/null || true
+          fi
