@@ -94,9 +94,12 @@ jobs:
         run: |
           TAG="calcium-binpkgs"
           ASSET="calcium-binpkgs.tar.zst"
-          if gh release view "$TAG" --json assets 2>/dev/null | grep -q "$ASSET"; then
+          if gh release view "$TAG" --json assets 2>/dev/null | grep -q "${ASSET}\."; then
             echo "Downloading stage4 binpkgs from Release '${TAG}'..."
-            gh release download "$TAG" --pattern "$ASSET" -D /tmp/
+            gh release download "$TAG" --pattern "${ASSET}.*" -D /tmp/
+            echo "Recombining chunks..."
+            cat /tmp/${ASSET}.* > /tmp/$ASSET
+            rm -f /tmp/${ASSET}.*
             emerge -q app-arch/zstd || true
             tar -I zstd -xf "/tmp/$ASSET" -C /var/cache/binpkgs/
             echo "Stage4 binpkgs extracted"
@@ -376,10 +379,11 @@ jobs:
           ASSET="calcium-binpkgs.tar.zst"
           echo "Creating stage4 tarball from ${PKGDIR}..."
           tar -I 'zstd -1' -cf "/tmp/${ASSET}" -C "${PKGDIR}" .
-          ls -lh "/tmp/${ASSET}"
+          echo "Splitting into 100M chunks..."
+          split -d -a 3 -b 100M "/tmp/${ASSET}" "/tmp/${ASSET}."
           gh release view "$TAG" &>/dev/null || gh release create "$TAG" --title "Binary package cache" --notes "Auto-generated after successful CI build" || true
-          echo "Uploading ${ASSET} to release ${TAG}..."
-          if ! gh release upload "$TAG" "/tmp/${ASSET}" --clobber 2>/dev/null; then
-            gh release delete-asset "$TAG" "$ASSET" 2>/dev/null || true
-            gh release upload "$TAG" "/tmp/${ASSET}" 2>/dev/null || true
-          fi
+          for chunk in /tmp/${ASSET}.*; do
+            echo "Uploading $(basename "$chunk")..."
+            gh release upload "$TAG" "$chunk" --clobber 2>/dev/null || true
+          done
+          rm -f "/tmp/${ASSET}" /tmp/${ASSET}.*
