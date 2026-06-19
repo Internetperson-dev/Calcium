@@ -102,6 +102,7 @@ jobs:
             rm -f /tmp/${ASSET}.*
             emerge -q app-arch/zstd || true
             tar -I zstd -xf "/tmp/$ASSET" -C /var/cache/binpkgs/
+            rm -f "/tmp/$ASSET"
             echo "Stage4 binpkgs extracted"
           else
             echo "No stage4 Release '${TAG}' found — will use binhost / build"
