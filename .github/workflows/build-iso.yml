@@ -1,221 +1,106 @@
-name: Build Gentoo Install ISO
+name: Build Gentoo GNOME ISO
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
-permissions:
-  contents: write
-
 jobs:
-  build-iso:
+  build:
     runs-on: ubuntu-latest
     container:
       image: gentoo/stage3:latest
       options: --privileged
-    timeout-minutes: 360
 
     env:
-      PKGDIR: /var/cache/binpkgs
+      ROOTFS: /gentoo-rootfs
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          path: calcium
 
-      - name: Recombine Split Files
-        run: bash calcium/scripts/recombine.sh calcium
+      # ---------------- BOOTSTRAP ROOTFS ----------------
+      - name: Create rootfs
+        run: |
+          mkdir -p $ROOTFS
+          cp -a / /gentoo-stage-copy || true
+
+      - name: Prepare chroot
+        run: |
+          mkdir -p $ROOTFS/{dev,proc,sys,run}
+          mount --bind /dev $ROOTFS/dev
+          mount --bind /proc $ROOTFS/proc
+          mount --bind /sys $ROOTFS/sys
 
       # ---------------- PORTAGE CONFIG ----------------
-      - name: Configure Portage
+      - name: Configure Portage in rootfs
         run: |
-          cp -ra calcium/etc-portage/* /etc/portage/ 2>/dev/null || true
-          rm -rf /etc/portage/repos.conf /etc/portage/gnupg /etc/portage/make.profile
-          rm -f /etc/portage/package.use/python
-          echo 'sys-apps/systemd' > /etc/portage/package.mask/systemd
-          echo 'dev-libs/libelf' >> /etc/portage/package.mask/systemd
-          echo 'sys-libs/zlib-ng' >> /etc/portage/package.mask/systemd
-          ln -sfn ../../var/db/repos/gentoo/profiles/default/linux/amd64/23.0/desktop /etc/portage/make.profile
-          mkdir -p /tmp/portage /tmp/distfiles
+          cp -r $GITHUB_WORKSPACE/etc-portage/* $ROOTFS/etc/portage/
+
+      # ---------------- PROFILE ----------------
+      - name: Set profile
+        run: |
+          ln -sf /var/db/repos/gentoo/profiles/default/linux/amd64/23.0/desktop/gnome \
+            $ROOTFS/etc/portage/make.profile
 
       # ---------------- MAKE.CONF ----------------
-      - name: Set make.conf
+      - name: make.conf
         run: |
-          > /etc/portage/make.conf
-          printf '%s\n' \
-            'COMMON_FLAGS="-O2 -pipe"' \
-            'CFLAGS="${COMMON_FLAGS}"' \
-            'CXXFLAGS="${COMMON_FLAGS}"' \
-            'USE="wayland pipewire pulseaudio X elogind gnome zsh"' \
-            'LC_MESSAGES=C.utf8' \
-            'FEATURES="getbinpkg buildpkg binpkg-multi-instance"' \
-            'PKGDIR=/var/cache/binpkgs' \
-            'ACCEPT_KEYWORDS="~amd64"' \
-            'ACCEPT_LICENSE="*"' \
-            "MAKEOPTS=\"-j$(nproc) -l$(nproc)\"" \
-            'INSTALLKERNEL_INITRD_GENERATOR="dracut"' \
-            'PORTAGE_TMPDIR=/tmp/portage' \
-            'DISTDIR=/tmp/distfiles' \
-            'EMERGE_DEFAULT_OPTS="--usepkg --verbose --autounmask-backtrack=y --backtrack=100"' \
-            >> /etc/portage/make.conf
+          cat > $ROOTFS/etc/portage/make.conf <<EOF
+          COMMON_FLAGS="-O2 -pipe"
+          CFLAGS="\${COMMON_FLAGS}"
+          CXXFLAGS="\${COMMON_FLAGS}"
+
+          USE="wayland pipewire gnome elogind dbus X"
+          ACCEPT_KEYWORDS="~amd64"
+          MAKEOPTS="-j$(nproc)"
+
+          FEATURES="buildpkg binpkg-multi-instance"
+          PKGDIR="/var/cache/binpkgs"
+          EOF
 
       # ---------------- SYNC ----------------
-      - name: Sync Portage Tree
+      - name: Sync Gentoo
         run: |
-          emerge-webrsync
-          cat calcium/etc-portage/repos.conf/gentoo.conf > /etc/portage/repos.conf
-          cat calcium/etc-portage/repos.conf/eselect-repo.conf >> /etc/portage/repos.conf
+          chroot $ROOTFS emerge-webrsync
 
-      # ---------------- CACHE RESTORE ----------------
-      - name: Restore binpkg cache
-        uses: actions/cache/restore@v4
-        with:
-          path: /tmp/binpkgs-cache.tar.zst
-          key: binpkgs-final-${{ hashFiles('calcium/world', 'calcium/etc-portage/package.use/*', 'calcium/etc-portage/package.mask/*') }}
-
-      - name: Extract binpkg cache
+      # ---------------- SYSTEM BASE ----------------
+      - name: Install base system
         run: |
-          if [ -f /tmp/binpkgs-cache.tar.zst ]; then
-            emerge -q app-arch/zstd || true
-            tar -I zstd -xf /tmp/binpkgs-cache.tar.zst -C /
-          fi
+          chroot $ROOTFS emerge -uDN @world
 
-      # ---------------- BASE SYSTEM ----------------
-      - name: Install System Base
+      # ---------------- GNOME ----------------
+      - name: Install GNOME
         run: |
-          PACKAGES="net-misc/curl sys-kernel/gentoo-kernel-bin sys-kernel/linux-firmware sys-kernel/dracut sys-boot/limine dev-libs/libisoburn sys-auth/elogind app-shells/zsh dev-vcs/git app-arch/7zip"
+          chroot $ROOTFS emerge gnome-base/gnome gdm
 
-          for i in 1 2 3 4 5; do
-            (emerge --autounmask-write --usepkgonly $PACKAGES 2>/dev/null || \
-             emerge --autounmask-write $PACKAGES) && break
-
-            find /etc/portage -name '._cfg*' -exec sh -c '
-              cat "$1" > "$(dirname "$1")/$(basename "$1" | sed "s/^\._cfg[0-9]*_//")"
-              rm -f "$1"
-            ' _ {} \;
-          done
-
-      # ---------------- SNAPSHOT ----------------
-      - name: Snapshot binpkgs (system base)
+      # ---------------- SERVICES ----------------
+      - name: Enable services
         run: |
-          tar -I 'zstd -1' -cf /tmp/binpkgs-system.tar.zst /var/cache/binpkgs
+          chroot $ROOTFS rc-update add dbus default || true
+          chroot $ROOTFS rc-update add gdm default || true
 
-      - uses: actions/cache/save@v4
-        with:
-          path: /tmp/binpkgs-system.tar.zst
-          key: binpkgs-system-${{ hashFiles('calcium/world', 'calcium/etc-portage/package.use/*', 'calcium/etc-portage/package.mask/*') }}
-
-      # ---------------- WORLD ----------------
-      - name: Install World Packages
+      # ---------------- KERNEL ----------------
+      - name: Kernel + initramfs
         run: |
-          emerge --with-bdeps=y @world || emerge --with-bdeps=y --usepkg @world
+          chroot $ROOTFS emerge sys-kernel/gentoo-kernel-bin sys-kernel/dracut
+          chroot $ROOTFS dracut --force
 
-      # ---------------- OVERLAYS ----------------
-      - name: Sync Overlays
+      # ---------------- ISO ROOTFS ----------------
+      - name: Create ISO root
         run: |
-          for repo in guru CachyOS-kernels hyproverlay pingwho-overlay arrans-overlay; do
-            emaint sync --repo "$repo" || true
-          done
-
-      # ---------------- WORLD FILE ----------------
-      - name: Deploy World File
-        run: |
-          cp calcium/world /var/lib/portage/world
-
-      # ---------------- GNOME DESKTOP (OPENRC) ----------------
-      - name: Install GNOME Desktop
-        run: |
-          DESKTOP_PKGS="
-            gnome-base/gnome
-            gnome-extra/gnome-tweaks
-            gnome-extra/gnome-shell-extensions
-            x11-base/xorg-server
-            x11-apps/xinit
-            gdm
-            sys-apps/dbus
-            sys-auth/elogind
-          "
-
-          emerge -q $DESKTOP_PKGS || emerge $DESKTOP_PKGS
-
-      - name: Enable GNOME services (OpenRC)
-        run: |
-          rc-update add dbus default || true
-          rc-update add elogind default || true
-          rc-update add gdm default || true
-
-      # ---------------- ZSH ----------------
-      - name: Configure Zsh
-        run: |
-          chsh -s /bin/zsh root || true
-
-      # ---------------- CONFIG FILES ----------------
-      - name: Install Configuration Files
-        run: |
-          cp -r calcium/etc/* /etc/ || true
-
-          mkdir -p /root
-          cp calcium/configs/zshrc /root/.zshrc || true
-
-          mkdir -p /etc/skel
-          cp calcium/configs/zshrc /etc/skel/.zshrc || true
-
-      # ---------------- NVIDIA ----------------
-      - name: Install NVIDIA Drivers
-        run: |
-          emerge -q x11-drivers/nvidia-drivers || emerge x11-drivers/nvidia-drivers
-
-      # ---------------- DRACUT ----------------
-      - name: Configure initramfs
-        run: |
-          mkdir -p /etc/dracut.conf.d
-          printf '%s\n' \
-            'force_drivers+=" nvidia nvidia_modeset nvidia_drm nvidia_uvm "' \
-            > /etc/dracut.conf.d/nvidia.conf
-
-      - name: Build Initramfs
-        run: |
-          KVER=$(ls /lib/modules | sort -V | tail -1)
-          dracut --kver "$KVER" --force --zstd --host-only \
-            /boot/initramfs.img
+          mkdir -p /iso/boot
+          cp $ROOTFS/boot/vmlinuz-* /iso/boot/
+          cp $ROOTFS/boot/initramfs* /iso/boot/
 
       # ---------------- ISO BUILD ----------------
-      - name: Assemble ISO
+      - name: Build ISO
         run: |
-          KVER=$(ls /lib/modules | sort -V | tail -1)
-
-          mkdir -p /iso-root/boot /iso-root/EFI/BOOT
-
-          cp /boot/vmlinuz-* /iso-root/boot/
-          cp /boot/initramfs* /iso-root/boot/
-          cp /usr/share/limine/limine-bios-cd.bin /iso-root/
-          cp /usr/share/limine/limine-bios.sys /iso-root/
-          cp /usr/share/limine/BOOTX64.EFI /iso-root/EFI/BOOT/
-          cp /usr/share/limine/limine-uefi-cd.bin /iso-root/
-
-          bash calcium/scripts/generate-limine-cfg.sh "$KVER" /iso-root/limine.cfg
-
           xorriso -as mkisofs \
-            -b limine-bios-cd.bin \
-            -no-emul-boot -boot-load-size 4 -boot-info-table \
-            --efi-boot limine-uefi-cd.bin \
-            -efi-boot-part --efi-boot-image --protective-msdos-label \
-            /iso-root -o /tmp/gentoo-custom-install.iso
-
-          limine bios-install /tmp/gentoo-custom-install.iso
-
-      # ---------------- VERIFY ----------------
-      - name: Verify ISO
-        run: |
-          ls -lh /tmp/gentoo-custom-install.iso
-          file /tmp/gentoo-custom-install.iso
+            -o /tmp/gentoo-gnome.iso \
+            -b boot/limine-bios-cd.bin \
+            -no-emul-boot \
+            /iso
 
       # ---------------- ARTIFACT ----------------
-      - name: Upload ISO
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: gentoo-custom-install-amd64
-          path: /tmp/gentoo-custom-install.iso
-          retention-days: 30
-          compression-level: 0
+          name: gentoo-gnome-iso
+          path: /tmp/gentoo-gnome.iso
