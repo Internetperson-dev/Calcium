@@ -31,16 +31,12 @@ jobs:
       - name: Configure Portage
         run: |
           cp -ra calcium/etc-portage/* /etc/portage/ 2>/dev/null || true
-
           rm -rf /etc/portage/repos.conf /etc/portage/gnupg /etc/portage/make.profile
           rm -f /etc/portage/package.use/python
-
           echo 'sys-apps/systemd' > /etc/portage/package.mask/systemd
           echo 'dev-libs/libelf' >> /etc/portage/package.mask/systemd
           echo 'sys-libs/zlib-ng' >> /etc/portage/package.mask/systemd
-
           ln -sfn ../../var/db/repos/gentoo/profiles/default/linux/amd64/23.0/desktop /etc/portage/make.profile
-
           mkdir -p /tmp/portage /tmp/distfiles
 
       # ---------------- MAKE.CONF ----------------
@@ -51,7 +47,7 @@ jobs:
             'COMMON_FLAGS="-O2 -pipe"' \
             'CFLAGS="${COMMON_FLAGS}"' \
             'CXXFLAGS="${COMMON_FLAGS}"' \
-            'USE="wayland pipewire pulseaudio X flatpak elogind -systemd gnutls"' \
+            'USE="wayland pipewire pulseaudio X elogind gnome zsh"' \
             'LC_MESSAGES=C.utf8' \
             'FEATURES="getbinpkg buildpkg binpkg-multi-instance"' \
             'PKGDIR=/var/cache/binpkgs' \
@@ -72,133 +68,35 @@ jobs:
           cat calcium/etc-portage/repos.conf/eselect-repo.conf >> /etc/portage/repos.conf
 
       # ---------------- CACHE RESTORE ----------------
-      - name: Restore best binpkg snapshot
+      - name: Restore binpkg cache
         uses: actions/cache/restore@v4
         with:
           path: /tmp/binpkgs-cache.tar.zst
           key: binpkgs-final-${{ hashFiles('calcium/world', 'calcium/etc-portage/package.use/*', 'calcium/etc-portage/package.mask/*') }}
-          restore-keys: |
-            binpkgs-world-
-            binpkgs-system-
-            binpkgs-
 
       - name: Extract binpkg cache
         run: |
           if [ -f /tmp/binpkgs-cache.tar.zst ]; then
-            echo "Restoring binary package cache..."
             emerge -q app-arch/zstd || true
             tar -I zstd -xf /tmp/binpkgs-cache.tar.zst -C /
           fi
 
-      - name: Download stage4 binpkgs from Release
-        run: |
-          TAG="calcium-binpkgs"
-          ASSET="calcium-binpkgs.tar.zst"
-          if gh release view "$TAG" --json assets 2>/dev/null | grep -q "${ASSET}\."; then
-            echo "Downloading stage4 binpkgs from Release '${TAG}'..."
-            gh release download "$TAG" --pattern "${ASSET}.*" -D /tmp/
-            echo "Recombining chunks..."
-            cat /tmp/${ASSET}.* > /tmp/$ASSET
-            rm -f /tmp/${ASSET}.*
-            emerge -q app-arch/zstd || true
-            tar -I zstd -xf "/tmp/$ASSET" -C /var/cache/binpkgs/
-            rm -f "/tmp/$ASSET"
-            echo "Stage4 binpkgs extracted"
-          else
-            echo "No stage4 Release '${TAG}' found — will use binhost / build"
-          fi
-        env:
-          GH_TOKEN: ${{ github.token }}
-
-      # ---------------- PRE-CONFIGURE AUTOMASK ----------------
-      - name: Pre-configure autounmask USE changes
-        run: |
-          echo 'media-video/ffmpeg -sdl' > /etc/portage/package.use/zz-circular-dep-break
-          echo 'dev-python/pillow -truetype' > /etc/portage/package.use/custom-no-truetype
-          echo 'media-libs/tiff -webp' > /etc/portage/package.use/zz-tiff-no-webp
-
-      # ---------------- LLVM BINARY ----------------
-      - name: Install LLVM + Clang from GitHub binary
-        run: |
-          VERSION="22.1.7"
-          URL="https://github.com/llvm/llvm-project/releases/download/llvmorg-${VERSION}/LLVM-${VERSION}-Linux-X64.tar.xz"
-          echo "Downloading LLVM ${VERSION} prebuilt binary from GitHub..."
-          wget -O /tmp/llvm.tar.xz "$URL"
-          tar xf /tmp/llvm.tar.xz -C /usr --strip-components=1
-          ldconfig
-
-          # Fake portage db entries for LLVM 22
-          SLOT="22"
-          for pkg in \
-            llvm-core/llvm \
-            llvm-core/llvm-common \
-            llvm-core/clang \
-            llvm-core/clang-common \
-            llvm-core/lld \
-            llvm-runtimes/compiler-rt \
-            llvm-runtimes/compiler-rt-sanitizers \
-            llvm-runtimes/clang-rtlib-config \
-            llvm-core/libclc \
-          ; do
-            cat="${pkg%%/*}"
-            name="${pkg#*/}"
-            db="/var/db/pkg/${pkg}-${VERSION}"
-            mkdir -p "$db"
-            echo "$cat" > "$db/CATEGORY"
-            echo "${name}-${VERSION}" > "$db/PF"
-            echo "$SLOT" > "$db/SLOT"
-            echo "8" > "$db/EAPI"
-            echo "~amd64" > "$db/KEYWORDS"
-            touch "$db/DEPEND" "$db/RDEPEND"
-            if [ "$pkg" = "llvm-core/llvm" ]; then
-              echo "binutils-plugin" > "$db/USE"
-            else
-              touch "$db/USE"
-            fi
-          done
-
-          # llvmgold — version 22, SLOT 0
-          VGOLD="22"
-          db="/var/db/pkg/llvm-core/llvmgold-${VGOLD}"
-          mkdir -p "$db"
-          echo "llvm-core" > "$db/CATEGORY"
-          echo "llvmgold-${VGOLD}" > "$db/PF"
-          echo "0" > "$db/SLOT"
-          echo "8" > "$db/EAPI"
-          echo "~amd64" > "$db/KEYWORDS"
-          touch "$db/DEPEND" "$db/RDEPEND" "$db/USE"
-
-          echo "Installed LLVM ${VERSION} from GitHub binary with fake db entries"
-
-      # ---------------- LIBXML2 (for ld.lld) ----------------
-      - name: Install libxml2 (so ld.lld finds it)
-        run: |
-          emerge -q dev-libs/libxml2
-          mkdir -p /etc/ld.so.conf.d
-          LIBXML2_DIR=$(find /usr -name "libxml2.so*" -type f 2>/dev/null | head -1 | xargs dirname)
-          echo "$LIBXML2_DIR" > /etc/ld.so.conf.d/libxml2.conf
-          ldconfig
-          ldconfig -p | grep libxml2 || echo "WARNING: libxml2 not found in ldconfig cache"
-          ldd /usr/bin/ld.lld 2>&1 | grep libxml2 || echo "ld.lld does not link libxml2 directly (may use dlopen)"
-
-      # ---------------- SYSTEM BASE ----------------
+      # ---------------- BASE SYSTEM ----------------
       - name: Install System Base
         run: |
           PACKAGES="net-misc/curl sys-kernel/gentoo-kernel-bin sys-kernel/linux-firmware sys-kernel/dracut sys-boot/limine dev-libs/libisoburn sys-auth/elogind app-shells/zsh dev-vcs/git app-arch/7zip"
 
           for i in 1 2 3 4 5; do
-            (emerge --autounmask-write --binpkg-respect-use=n --usepkgonly --usepkg-exclude 'virtual/libelf' $PACKAGES 2>/dev/null || \
-             emerge --autounmask-write --usepkg --usepkg-exclude 'virtual/libelf' $PACKAGES) && break
+            (emerge --autounmask-write --usepkgonly $PACKAGES 2>/dev/null || \
+             emerge --autounmask-write $PACKAGES) && break
+
             find /etc/portage -name '._cfg*' -exec sh -c '
               cat "$1" > "$(dirname "$1")/$(basename "$1" | sed "s/^\._cfg[0-9]*_//")"
               rm -f "$1"
             ' _ {} \;
           done
 
-          emerge --autounmask=n --binpkg-respect-use=n --usepkgonly --usepkg-exclude 'virtual/libelf' $PACKAGES 2>/dev/null || \
-          emerge --autounmask=n --usepkg --usepkg-exclude 'virtual/libelf' $PACKAGES
-
-      # ---------------- SNAPSHOT #1 ----------------
+      # ---------------- SNAPSHOT ----------------
       - name: Snapshot binpkgs (system base)
         run: |
           tar -I 'zstd -1' -cf /tmp/binpkgs-system.tar.zst /var/cache/binpkgs
@@ -208,11 +106,15 @@ jobs:
           path: /tmp/binpkgs-system.tar.zst
           key: binpkgs-system-${{ hashFiles('calcium/world', 'calcium/etc-portage/package.use/*', 'calcium/etc-portage/package.mask/*') }}
 
-      # ---------------- SYNC OVERLAYS ----------------
+      # ---------------- WORLD ----------------
+      - name: Install World Packages
+        run: |
+          emerge --with-bdeps=y @world || emerge --with-bdeps=y --usepkg @world
+
+      # ---------------- OVERLAYS ----------------
       - name: Sync Overlays
         run: |
           for repo in guru CachyOS-kernels hyproverlay pingwho-overlay arrans-overlay; do
-            echo "Syncing overlay: $repo"
             emaint sync --repo "$repo" || true
           done
 
@@ -221,111 +123,61 @@ jobs:
         run: |
           cp calcium/world /var/lib/portage/world
 
-      # ---------------- FLUTTER ----------------
-      - name: Install Flutter
+      # ---------------- GNOME DESKTOP (OPENRC) ----------------
+      - name: Install GNOME Desktop
         run: |
-          for i in 1 2 3 4 5; do
-            (emerge --autounmask-write --binpkg-respect-use=n --usepkgonly -q dev-lang/flutter-bin 2>/dev/null || \
-             emerge --autounmask-write -q dev-lang/flutter-bin) && break
-            find /etc/portage -name '._cfg*' -exec sh -c '
-              cat "$1" > "$(dirname "$1")/$(basename "$1" | sed "s/^\._cfg[0-9]*_//")"
-              rm -f "$1"
-            ' _ {} \;
-          done
-          emerge -q --autounmask=n --binpkg-respect-use=n --usepkgonly dev-lang/flutter-bin 2>/dev/null || \
-          emerge -q --autounmask=n dev-lang/flutter-bin
+          DESKTOP_PKGS="
+            gnome-base/gnome
+            gnome-extra/gnome-tweaks
+            gnome-extra/gnome-shell-extensions
+            x11-base/xorg-server
+            x11-apps/xinit
+            gdm
+            sys-apps/dbus
+            sys-auth/elogind
+          "
 
-      # ---------------- BINARY GCC ----------------
-      - name: Install binary gcc from binhost
+          emerge -q $DESKTOP_PKGS || emerge $DESKTOP_PKGS
+
+      - name: Enable GNOME services (OpenRC)
         run: |
-          emerge --usepkgonly -1q sys-devel/gcc 2>/dev/null && echo "gcc installed from binary" || echo "No binary gcc, will use stage3 version"
+          rc-update add dbus default || true
+          rc-update add elogind default || true
+          rc-update add gdm default || true
 
-      # ---------------- WORLD ----------------
-      - name: Install World Packages
+      # ---------------- ZSH ----------------
+      - name: Configure Zsh
         run: |
-          for i in 1 2 3 4 5; do
-            (emerge --autounmask-write --with-bdeps=y --binpkg-respect-use=n --usepkgonly --usepkg-exclude 'virtual/libelf' @world 2>/dev/null || \
-             emerge --autounmask-write --with-bdeps=y --usepkg --usepkg-exclude 'virtual/libelf' @world) && break
-            find /etc/portage -name '._cfg*' -exec sh -c '
-              cat "$1" > "$(dirname "$1")/$(basename "$1" | sed "s/^\._cfg[0-9]*_//")"
-              rm -f "$1"
-            ' _ {} \;
-          done
+          chsh -s /bin/zsh root || true
 
-          emerge --with-bdeps=y --autounmask=n --binpkg-respect-use=n --usepkgonly --usepkg-exclude 'virtual/libelf' @world 2>/dev/null || \
-          emerge --with-bdeps=y --autounmask=n --usepkg --usepkg-exclude 'virtual/libelf' @world
-
-      # ---------------- SNAPSHOT #2 ----------------
-      - name: Snapshot binpkgs (world)
+      # ---------------- CONFIG FILES ----------------
+      - name: Install Configuration Files
         run: |
-          tar -I 'zstd -1' -cf /tmp/binpkgs-world.tar.zst /var/cache/binpkgs
+          cp -r calcium/etc/* /etc/ || true
 
-      - uses: actions/cache/save@v4
-        with:
-          path: /tmp/binpkgs-world.tar.zst
-          key: binpkgs-world-${{ hashFiles('calcium/world', 'calcium/etc-portage/package.use/*', 'calcium/etc-portage/package.mask/*') }}
+          mkdir -p /root
+          cp calcium/configs/zshrc /root/.zshrc || true
 
-      # ---------------- HYPRLAND ----------------
-      - name: Install Hyprland
-        run: |
-          for i in 1 2 3 4 5; do
-            (emerge --autounmask-write --binpkg-respect-use=n --usepkgonly -q gui-wm/hyprland 2>/dev/null || \
-             emerge --autounmask-write -q gui-wm/hyprland) && break
-            find /etc/portage -name '._cfg*' -exec sh -c '
-              cat "$1" > "$(dirname "$1")/$(basename "$1" | sed "s/^\._cfg[0-9]*_//")"
-              rm -f "$1"
-            ' _ {} \;
-          done
-          emerge -q --autounmask=n --binpkg-respect-use=n --usepkgonly gui-wm/hyprland 2>/dev/null || \
-          emerge -q --autounmask=n gui-wm/hyprland
+          mkdir -p /etc/skel
+          cp calcium/configs/zshrc /etc/skel/.zshrc || true
 
       # ---------------- NVIDIA ----------------
       - name: Install NVIDIA Drivers
         run: |
-          for i in 1 2 3 4 5; do
-            (emerge --autounmask-write --binpkg-respect-use=n --usepkgonly -q x11-drivers/nvidia-drivers 2>/dev/null || \
-             emerge --autounmask-write -q x11-drivers/nvidia-drivers) && break
-            find /etc/portage -name '._cfg*' -exec sh -c '
-              cat "$1" > "$(dirname "$1")/$(basename "$1" | sed "s/^\._cfg[0-9]*_//")"
-              rm -f "$1"
-            ' _ {} \;
-          done
-          emerge -q --autounmask=n --binpkg-respect-use=n --usepkgonly x11-drivers/nvidia-drivers 2>/dev/null || \
-          emerge -q --autounmask=n x11-drivers/nvidia-drivers
-
-      # ---------------- FINAL SNAPSHOT ----------------
-      - name: Snapshot binpkgs (final)
-        run: |
-          tar -I 'zstd -1' -cf /tmp/binpkgs-final.tar.zst /var/cache/binpkgs
-
-      - uses: actions/cache/save@v4
-        with:
-          path: /tmp/binpkgs-final.tar.zst
-          key: binpkgs-final-${{ hashFiles('calcium/world', 'calcium/etc-portage/package.use/*', 'calcium/etc-portage/package.mask/*') }}
+          emerge -q x11-drivers/nvidia-drivers || emerge x11-drivers/nvidia-drivers
 
       # ---------------- DRACUT ----------------
-      - name: Configure NVIDIA initramfs
+      - name: Configure initramfs
         run: |
           mkdir -p /etc/dracut.conf.d
           printf '%s\n' \
             'force_drivers+=" nvidia nvidia_modeset nvidia_drm nvidia_uvm "' \
-            'install_items+=" /etc/modprobe.d/nvidia.conf "' \
             > /etc/dracut.conf.d/nvidia.conf
-
-          mkdir -p /etc/modprobe.d
-          printf '%s\n' \
-            'options nvidia_drm modeset=1 fbdev=0' \
-            'options nvidia NVreg_DynamicPowerManagement=0x02' \
-            'options nvidia NVreg_PreserveVideoMemoryAllocations=1' \
-            > /etc/modprobe.d/nvidia.conf
 
       - name: Build Initramfs
         run: |
           KVER=$(ls /lib/modules | sort -V | tail -1)
-
           dracut --kver "$KVER" --force --zstd --host-only \
-            --add bash \
-            --force-drivers "nvidia nvidia_modeset nvidia_drm nvidia_uvm" \
             /boot/initramfs.img
 
       # ---------------- ISO BUILD ----------------
@@ -337,8 +189,6 @@ jobs:
 
           cp /boot/vmlinuz-* /iso-root/boot/
           cp /boot/initramfs* /iso-root/boot/
-          cp calcium/boot-6-15-7/amd-uc.img /iso-root/boot/ 2>/dev/null || true
-
           cp /usr/share/limine/limine-bios-cd.bin /iso-root/
           cp /usr/share/limine/limine-bios.sys /iso-root/
           cp /usr/share/limine/BOOTX64.EFI /iso-root/EFI/BOOT/
@@ -369,22 +219,3 @@ jobs:
           path: /tmp/gentoo-custom-install.iso
           retention-days: 30
           compression-level: 0
-
-      # ---------------- STAGE4 RELEASE ----------------
-      - name: Upload binpkgs to Release
-        if: github.ref == 'refs/heads/main' && success()
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          TAG="calcium-binpkgs"
-          ASSET="calcium-binpkgs.tar.zst"
-          echo "Creating stage4 tarball from ${PKGDIR}..."
-          tar -I 'zstd -1' -cf "/tmp/${ASSET}" -C "${PKGDIR}" .
-          echo "Splitting into 100M chunks..."
-          split -d -a 3 -b 100M "/tmp/${ASSET}" "/tmp/${ASSET}."
-          gh release view "$TAG" &>/dev/null || gh release create "$TAG" --title "Binary package cache" --notes "Auto-generated after successful CI build" || true
-          for chunk in /tmp/${ASSET}.*; do
-            echo "Uploading $(basename "$chunk")..."
-            gh release upload "$TAG" "$chunk" --clobber 2>/dev/null || true
-          done
-          rm -f "/tmp/${ASSET}" /tmp/${ASSET}.*
